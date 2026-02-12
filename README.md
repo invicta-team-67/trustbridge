@@ -4,7 +4,7 @@
 -project name - invicta-superbase
 -project region - US-WEST(NORTH CALIFORNIA)
 -Auth provider - Email and Password(Default)
-g
+
 ## 2 AUTHENTICATION SETUP
 -Email/Password signup: Enabled by default
 -Email confirmation: Configurable; can be enabled or disabled for testing
