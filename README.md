@@ -2,7 +2,6 @@
 ## Backend – Supabase Confirguration and basic authentication
 ## 1 SUPABASE CONFIRGURATION
 -project name - invicta-superbase
--project URL - 
 -project region - US-WEST(NORTH CALIFORNIA)
 -Auth provider - Email and Password(Default)
 g
