@@ -1,20 +1,32 @@
-# Team Repo
-## Backend – Supabase Confirguration and basic authentication
-## 1 SUPABASE CONFIRGURATION
--project name - invicta-superbase
--project region - US-WEST(NORTH CALIFORNIA)
--Auth provider - Email and Password(Default)
+# TrustBridge (Project Invicta)
+Project setup
 
-## 2 AUTHENTICATION SETUP
--Email/Password signup: Enabled by default
--Email confirmation: Configurable; can be enabled or disabled for testing
--Test user created:
-   Email: akumupatsy25@gmail.com
-   Password: (hashed securely by Supabase)
-## CONCLUSIONS FOR SUPABASE CONFIRGURATION AND AUTH
+---
 
-Confirms that authentication is fully functional before any tables or RLS policies are created
--Backend verification: Auth works correctly via Supabase dashboard
--Supabase project created and configured
--Authentication setup verified
--Test user created to validate auth and was concluded that the user exists with a unique ID,Email and password hash
+## 🚀 Project Status
+Authentication, Routing & Backend Connection Verified
+
+---
+
+## 🛠️ Tech Stack
+
+### **Frontend (User Interface)**
+- **Framework:** React (Vite)
+- **Styling:** Tailwind CSS v4
+- **Routing:** React Router DOM
+- **Icons:** Lucide React
+
+### **Backend (Infrastructure)**
+- **Service:** Supabase
+- **Region:** US-West (North California)
+- **Project Name:** `invicta-superbase`
+- **Auth Provider:** Email & Password (Default)
+
+---
+
+## 💻 Setup & Installation (Frontend)
+
+1. **Clone the repository**
+   ```bash
+   git clone [https://github.com/invicta-team-67/trustbridge.git] (https://github.com/invicta-team-67/trustbridge.git)
+   cd trustbridge
