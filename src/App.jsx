@@ -3,7 +3,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 // Notice the './page/' added to the paths here!
 import LandingPage from './pages/Landing'; 
-import SignUp from './pages/SignUp';           
+import SignUp from './pages/SignUp';  
+import Login from './pages/Login';
+import Onboarding from './pages/Onboarding';
+     
 
 const App = () => {
   return (
@@ -14,6 +17,9 @@ const App = () => {
         
         {/* The Sign Up page loads when the URL is /signup */}
         <Route path="/signup" element={<SignUp />} />
+
+        <Route path="/login" element={<Login />} />
+        <Route path="/onboarding" element={<Onboarding />} />    
       </Routes>
     </Router>
   );

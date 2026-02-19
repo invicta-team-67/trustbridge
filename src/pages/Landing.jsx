@@ -37,7 +37,7 @@ const ChevronUpIcon = () => (
 
 
 const Navbar = () => {
-  const navigate = useNavigate(); // <-- Initialize the router hook
+  const navigate = useNavigate();
 
   return (
     <motion.nav 
@@ -80,7 +80,7 @@ const Navbar = () => {
 };
 
 const HeroSection = () => {
-  const navigate = useNavigate(); // <-- Initialize the router hook here too
+  const navigate = useNavigate();
 
   const containerVariants = {
     hidden: { opacity: 0 },
