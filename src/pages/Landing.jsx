@@ -128,11 +128,11 @@ const HeroSection = () => {
 
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-6">
           <div className="flex -space-x-3">
-            <img src="../public/landing-images/user1.jpg" alt="User" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
-            <img src="../public/landing-images/user2.jpg" alt="User" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
-            <img src="../public/landing-images/user3.jpg" alt="User" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
-            <img src="../public/landing-images/user4.jpg" alt="User" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
-            <img src="../public/landing-images/user5.jpg" alt="User" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
+            <img src="/landing-images/user1.jpg" alt="User" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
+            <img src="/landing-images/user2.jpg" alt="User" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
+            <img src="/landing-images/user3.jpg" alt="User" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
+            <img src="/landing-images/user4.jpg" alt="User" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
+            <img src="/landing-images/user5.jpg" alt="User" className="w-10 h-10 rounded-full border-2 border-white object-cover" />
           </div>
           <p className="text-sm font-medium text-gray-600">
             Join <span className="font-bold text-gray-900">10k+</span> businesses building credit today.
@@ -143,7 +143,7 @@ const HeroSection = () => {
       {/* Hidden on mobile and tablet, block on large screens */}
       <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }} className="hidden lg:block relative lg:translate-x-12">
         <motion.div animate={{ y: [-10, 10, -10] }} transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}>
-          <img src="../public/landing-images/hero-img.png" alt="Businessman" className="w-full h-auto object-contain max-w-2xl drop-shadow-2xl" />
+          <img src="/landing-images/hero-img.png" alt="Businessman" className="w-full h-auto object-contain max-w-2xl drop-shadow-2xl" />
         </motion.div>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-blue-100 rounded-full blur-[100px] opacity-30 -z-10 pointer-events-none"></div>
       </motion.div>

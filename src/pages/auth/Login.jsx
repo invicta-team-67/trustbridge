@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 
 // --- INLINE ICONS ---
 const MailIcon = () => (
@@ -34,6 +36,14 @@ const EyeIcon = ({ show }) => (
   </svg>
 );
 
+const InfoIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M12 16v-4"/>
+    <path d="M12 8h.01"/>
+  </svg>
+);
+
 const GoogleIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -56,44 +66,106 @@ const LogoIcon = () => (
   </svg>
 );
 
-
 // --- MAIN COMPONENT ---
 const Login = () => {
+  const navigate = useNavigate();
+
+  //Form State
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Error & Loading States
+  const [identifierError, setIdentifierError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [generalError, setGeneralError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+//Validation Logic
+  const validateForm = () => {
+    let isValid = true;
+    setIdentifierError('');
+    setPasswordError('');
+    setGeneralError('');
+
+// Regex to ensure the email format is valid (e.g., name@domain.com)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!identifier.trim()) {
+      setIdentifierError('Please enter your email.');
+      isValid = false;
+    } else if (!emailRegex.test(identifier)) {
+      setIdentifierError('Please enter a valid email address.');
+      isValid = false;
+    }
+
+    if (!password) {
+      setPasswordError('Password is required.');
+      isValid = false;
+    }
+
+    return isValid;
+  };
+
+  //SUPABASE SUBMIT HANDLER
+  const handleLogin = async (e) => {
+    e.preventDefault(); 
+    
+    if (!validateForm()) return; 
+
+    setIsLoading(true);
+
+    try {
+      // Connect to Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: identifier, 
+        password: password,
+      });
+
+      if (error) {
+        // Supabase sends back messages like "Invalid login credentials"
+        setGeneralError(error.message); 
+      } else if (data.user) {
+        // Success! Route to the dashboard
+        navigate('/dashboard'); 
+      }
+    } catch (err) {
+      setGeneralError('An unexpected error occurred. Please check your connection.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen w-full flex bg-white font-sans text-[#0f172a]">
       
       {/* Left Column: Branding (Hidden on smaller screens) */}
-      <div className="hidden lg:flex w-1/2 bg-[#0a3ca3] relative overflow-hidden flex-col justify-between p-12 xl:p-20">
-        
-        {/* Abstract Background Gradients */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-[20%] -left-[10%] w-[80%] h-[80%] rounded-full bg-[#1a56db] blur-[120px] mix-blend-screen opacity-60"></div>
-          <div className="absolute top-[30%] -right-[20%] w-[100%] h-[100%] rounded-full bg-[#0ea5e9] blur-[140px] mix-blend-screen opacity-40"></div>
-        </div>
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden flex-col justify-between p-12 xl:p-20 h-screen sticky top-0">
+        <img 
+          src="/auth-images/img-container.png" 
+          alt="Abstract blue background" 
+          className="absolute inset-0 w-full h-full object-cover z-0"
+        />
 
-        {/* Content */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="relative z-10 mt-16"
         >
-          <h1 className="text-5xl xl:text-6xl font-extrabold text-white mb-6 leading-[1.15] tracking-tight">
+          <h1 className="text-5xl xl:text-6xl font-extrabold text-white mb-6 leading-[1.15] tracking-tight drop-shadow-sm">
             Welcome Back
           </h1>
-          <p className="text-blue-100 text-lg xl:text-xl font-medium max-w-md leading-relaxed">
+          <p className="text-blue-50 text-lg xl:text-xl font-medium max-w-md leading-relaxed drop-shadow-sm">
             Log in to access your business trust dashboard.
           </p>
         </motion.div>
 
-        {/* Logo at bottom */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.8 }}
-          className="relative z-10 flex items-center gap-2"
+          className="relative z-10 flex items-center gap-2 drop-shadow-sm"
         >
           <LogoIcon />
           <span className="text-white font-bold text-2xl tracking-tight">TrustBridge</span>
@@ -101,39 +173,62 @@ const Login = () => {
       </div>
 
       {/* Right Column: Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 xl:p-24 h-screen overflow-y-auto">
+      <div className="w-full lg:w-1/2 flex flex-col items-center p-6 sm:p-12 xl:p-24 h-screen overflow-y-auto">
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-full max-w-[400px]"
+          className="w-full max-w-[400px] my-auto py-8"
         >
+          {/* General Error Banner */}
+          {generalError && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 bg-white border border-red-300 text-gray-700 px-4 py-3 rounded-lg mb-6 text-sm shadow-sm"
+            >
+              <InfoIcon />
+              <span className="font-medium text-red-600">{generalError}</span>
+            </motion.div>
+          )}
+
           <div className="mb-10 text-center">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3 tracking-tight text-[#0f172a]">Login</h2>
           </div>
 
-          <form className="flex flex-col gap-5">
+          <form onSubmit={handleLogin} className="flex flex-col gap-5">
             
-            {/* Identifier (Email/Phone) */}
+            {/* Identifier (Email) */}
             <div>
-              <label className="block text-xs font-bold text-[#0f172a] mb-2">Email, Phone, Business name</label>
+              <label className="block text-xs font-bold text-[#0f172a] mb-2">Email address</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                   <MailIcon />
                 </div>
                 <input 
-                  type="text" 
+                  type="email" 
+                  value={identifier}
+                  onChange={(e) => {
+                    setIdentifier(e.target.value);
+                    setIdentifierError(''); 
+                    setGeneralError('');
+                  }}
                   placeholder="name@company.com" 
-                  className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-lg text-sm focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db] outline-none transition-all shadow-sm placeholder-gray-400 font-medium"
+                  className={`w-full pl-11 pr-4 py-3 bg-white border rounded-lg text-sm outline-none transition-all shadow-sm font-medium ${
+                    identifierError || generalError ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db] placeholder-gray-400'
+                  }`}
                 />
               </div>
+              {identifierError && <p className="text-[11px] text-red-500 font-bold mt-1.5 ml-1">{identifierError}</p>}
             </div>
 
             {/* Password */}
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-xs font-bold text-[#0f172a]">Password</label>
-                <a href="#forgot" className="text-xs font-bold text-[#1a56db] hover:underline">Forgot Password?</a>
+                <a href="/forgot" className="text-xs font-bold text-[#1a56db] hover:underline mt-1">
+                  Forgot Password?
+                </a>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -141,25 +236,45 @@ const Login = () => {
                 </div>
                 <input 
                   type={showPassword ? "text" : "password"} 
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setPasswordError('');
+                    setGeneralError('');
+                  }}
                   placeholder="••••••••" 
-                  className="w-full pl-11 pr-11 py-3 bg-white border border-gray-200 rounded-lg text-sm focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db] outline-none transition-all shadow-sm placeholder-gray-400 font-medium tracking-widest"
+                  className={`w-full pl-11 pr-11 py-3 bg-white border rounded-lg text-sm outline-none transition-all shadow-sm font-medium tracking-widest ${
+                    passwordError || generalError ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db] placeholder-gray-400'
+                  }`}
                 />
                 <div 
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center cursor-pointer"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   <EyeIcon show={showPassword} />
                 </div>
               </div>
+   {passwordError && (
+  <motion.p 
+    initial={{ opacity: 0, x: -10 }} 
+    animate={{ opacity: 1, x: [-5, 5, -5, 5, 0] }} // AShake Animation!
+    transition={{ duration: 0.4 }}
+    className="text-[11px] text-red-500 font-bold mt-1.5 ml-1"
+  >
+    {passwordError}
+  </motion.p>
+)}
             </div>
 
             {/* Login Button */}
             <motion.button 
+              type="submit" 
+              disabled={isLoading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full bg-[#1a56db] text-white py-3.5 rounded-lg font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors mt-2"
+              className="w-full bg-[#1a56db] text-white py-3.5 rounded-lg font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Login to Account
+              {isLoading ? 'Authenticating...' : 'Login to Account'}
             </motion.button>
 
             {/* Divider */}
@@ -174,16 +289,14 @@ const Login = () => {
                 type="button" 
                 className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-[#0f172a] py-3 rounded-lg font-bold text-sm hover:bg-gray-50 transition-colors shadow-sm"
               >
-                <GoogleIcon />
-                Continue with google
+                <GoogleIcon /> Continue with google
               </button>
               
               <button 
                 type="button" 
                 className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-[#0f172a] py-3 rounded-lg font-bold text-sm hover:bg-gray-50 transition-colors shadow-sm"
               >
-                <AppleIcon />
-                Continue with apple
+                <AppleIcon /> Continue with apple
               </button>
             </div>
 
