@@ -1,14 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-
-// Custom Logo
-const TrustBridgeLogo = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 100 100">
-    <polygon points="50,10 90,85 10,85" fill="none" stroke="#1a56db" strokeWidth="8" strokeLinejoin="round"/>
-    <text x="50" y="70" fontFamily="sans-serif" fontSize="48" fontWeight="bold" fill="#1a56db" textAnchor="middle">T</text>
-  </svg>
-);
+import Logo from '../../components/logo';
 
 // Green Success Icon with the halo effect
 const SuccessCheckIcon = () => (
@@ -34,7 +27,7 @@ const PasswordResetSuccess = () => {
       {/* Top Navigation Bar */}
       <header className="bg-white px-8 py-4 flex items-center shadow-sm w-full">
         <div className="flex items-center gap-2">
-          <TrustBridgeLogo />
+          <Logo />
           <span className="text-[#0f172a] font-extrabold text-xl tracking-tight">TrustBridge</span>
         </div>
       </header>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase'; 
+import Logo from '../../components/logo2';
 
 // --- INLINE ICONS ---
 const MailIcon = () => (
@@ -19,7 +20,7 @@ const LockIcon = () => (
 );
 
 const EyeIcon = ({ show }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 hover:text-[#1a56db] transition-colors cursor-pointer">
     {show ? (
       <>
         <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
@@ -66,11 +67,12 @@ const LogoIcon = () => (
   </svg>
 );
 
+
 // --- MAIN COMPONENT ---
 const Login = () => {
   const navigate = useNavigate();
 
-  //Form State
+  // Form State
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -81,14 +83,13 @@ const Login = () => {
   const [generalError, setGeneralError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-//Validation Logic
+  // Validation Logic
   const validateForm = () => {
     let isValid = true;
     setIdentifierError('');
     setPasswordError('');
     setGeneralError('');
 
-// Regex to ensure the email format is valid (e.g., name@domain.com)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!identifier.trim()) {
@@ -116,23 +117,35 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Connect to Supabase Auth
+      // Connect to Supabase Auth -> signInWithPassword
       const { data, error } = await supabase.auth.signInWithPassword({
         email: identifier, 
         password: password,
       });
 
       if (error) {
-        // Supabase sends back messages like "Invalid login credentials"
-        setGeneralError(error.message); 
+        // Handle incorrect passwords or missing users gracefully
+        setGeneralError('Invalid email or password. Please try again.'); 
       } else if (data.user) {
-        // Success! Route to the dashboard
+        // Success! Send them to the dashboard
         navigate('/dashboard'); 
       }
     } catch (err) {
       setGeneralError('An unexpected error occurred. Please check your connection.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  //SOCIAL LOGIN HANDLER
+  const handleSocialLogin = async (provider) => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: provider,
+      });
+      if (error) throw error;
+    } catch (err) {
+      setGeneralError(`Could not authenticate with ${provider}.`);
     }
   };
 
@@ -167,8 +180,10 @@ const Login = () => {
           transition={{ delay: 0.5, duration: 0.8 }}
           className="relative z-10 flex items-center gap-2 drop-shadow-sm"
         >
-          <LogoIcon />
-          <span className="text-white font-bold text-2xl tracking-tight">TrustBridge</span>
+        <div className="flex items-center gap-2 cursor-pointer">
+  <Logo />
+  <span className="font-bold text-xl text-[#fcfcfc]">TrustBridge</span>
+</div>
         </motion.div>
       </div>
 
@@ -254,16 +269,16 @@ const Login = () => {
                   <EyeIcon show={showPassword} />
                 </div>
               </div>
-   {passwordError && (
-  <motion.p 
-    initial={{ opacity: 0, x: -10 }} 
-    animate={{ opacity: 1, x: [-5, 5, -5, 5, 0] }} // AShake Animation!
-    transition={{ duration: 0.4 }}
-    className="text-[11px] text-red-500 font-bold mt-1.5 ml-1"
-  >
-    {passwordError}
-  </motion.p>
-)}
+              {passwordError && (
+                <motion.p 
+                  initial={{ opacity: 0, x: -10 }} 
+                  animate={{ opacity: 1, x: [-5, 5, -5, 5, 0] }} 
+                  transition={{ duration: 0.4 }}
+                  className="text-[11px] text-red-500 font-bold mt-1.5 ml-1"
+                >
+                  {passwordError}
+                </motion.p>
+              )}
             </div>
 
             {/* Login Button */}
@@ -272,8 +287,13 @@ const Login = () => {
               disabled={isLoading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full bg-[#1a56db] text-white py-3.5 rounded-lg font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full bg-[#1a56db] flex justify-center items-center gap-2 text-white py-3.5 rounded-lg font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
+              {isLoading && (
+                <motion.svg animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white opacity-70">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </motion.svg>
+              )}
               {isLoading ? 'Authenticating...' : 'Login to Account'}
             </motion.button>
 
@@ -287,16 +307,18 @@ const Login = () => {
             <div className="flex flex-col gap-3">
               <button 
                 type="button" 
+                onClick={() => handleSocialLogin('google')}
                 className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-[#0f172a] py-3 rounded-lg font-bold text-sm hover:bg-gray-50 transition-colors shadow-sm"
               >
-                <GoogleIcon /> Continue with google
+                <GoogleIcon /> Continue with Google
               </button>
               
               <button 
                 type="button" 
+                onClick={() => handleSocialLogin('apple')}
                 className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-[#0f172a] py-3 rounded-lg font-bold text-sm hover:bg-gray-50 transition-colors shadow-sm"
               >
-                <AppleIcon /> Continue with apple
+                <AppleIcon /> Continue with Apple
               </button>
             </div>
 
