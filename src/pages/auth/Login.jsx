@@ -67,23 +67,18 @@ const LogoIcon = () => (
   </svg>
 );
 
-
-// --- MAIN COMPONENT ---
 const Login = () => {
   const navigate = useNavigate();
 
-  // Form State
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Error & Loading States
   const [identifierError, setIdentifierError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [generalError, setGeneralError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Validation Logic
   const validateForm = () => {
     let isValid = true;
     setIdentifierError('');
@@ -108,7 +103,6 @@ const Login = () => {
     return isValid;
   };
 
-  //SUPABASE SUBMIT HANDLER
   const handleLogin = async (e) => {
     e.preventDefault(); 
     
@@ -117,18 +111,15 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Connect to Supabase Auth -> signInWithPassword
       const { data, error } = await supabase.auth.signInWithPassword({
         email: identifier, 
         password: password,
       });
 
-      if (error) {
-        // Handle incorrect passwords or missing users gracefully
+if (error) {
         setGeneralError('Invalid email or password. Please try again.'); 
       } else if (data.user) {
-        // Success! Send them to the dashboard
-        navigate('/dashboard'); 
+        navigate('/dashboard');
       }
     } catch (err) {
       setGeneralError('An unexpected error occurred. Please check your connection.');
@@ -136,8 +127,6 @@ const Login = () => {
       setIsLoading(false);
     }
   };
-
-  //SOCIAL LOGIN HANDLER
   const handleSocialLogin = async (provider) => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -187,7 +176,6 @@ const Login = () => {
         </motion.div>
       </div>
 
-      {/* Right Column: Form */}
       <div className="w-full lg:w-1/2 flex flex-col items-center p-6 sm:p-12 xl:p-24 h-screen overflow-y-auto">
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
@@ -195,7 +183,7 @@ const Login = () => {
           transition={{ duration: 0.6, ease: "easeOut" }}
           className="w-full max-w-[400px] my-auto py-8"
         >
-          {/* General Error Banner */}
+
           {generalError && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
@@ -213,7 +201,6 @@ const Login = () => {
 
           <form onSubmit={handleLogin} className="flex flex-col gap-5">
             
-            {/* Identifier (Email) */}
             <div>
               <label className="block text-xs font-bold text-[#0f172a] mb-2">Email address</label>
               <div className="relative">
@@ -237,7 +224,6 @@ const Login = () => {
               {identifierError && <p className="text-[11px] text-red-500 font-bold mt-1.5 ml-1">{identifierError}</p>}
             </div>
 
-            {/* Password */}
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-xs font-bold text-[#0f172a]">Password</label>
