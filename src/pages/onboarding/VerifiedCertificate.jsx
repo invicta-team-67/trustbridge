@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase'; // <-- CONNECTED TO DB
+import Logo from '../../components/logo2';
 
 // --- INLINE ICONS ---
 const CheckCircleIcon = () => (
@@ -69,27 +70,15 @@ const VerifiedCertificate = () => {
     <div className="min-h-screen w-full flex bg-white font-sans text-[#0f172a]">
       
       {/* Left Column: Branding (Hidden on mobile) */}
-      <div className="hidden lg:flex w-[40%] relative overflow-hidden flex-col justify-center p-12 xl:p-20 h-screen sticky top-0">
-        
-        {/* Background Image Setup */}
-        <img 
-          src="/auth-images/img-container.png" 
-          alt="Abstract blue background" 
-          className="absolute inset-0 w-full h-full object-cover z-0"
-        />
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="relative z-10"
-        >
-          <h1 className="text-4xl xl:text-5xl font-extrabold text-white mb-6 leading-[1.15] tracking-tight drop-shadow-sm">
-            You're All Set!
-          </h1>
-          <p className="text-blue-50 text-lg font-medium max-w-sm leading-relaxed drop-shadow-sm">
-            Your business is fully verified. Download your TrustBridge ID or head straight to your dashboard.
-          </p>
+            <div className="hidden lg:flex w-1/2 relative overflow-hidden flex-col justify-between p-12 xl:p-20 h-screen sticky top-0">
+        <img src="/auth-images/img-container.png" alt="Background" className="absolute inset-0 w-full h-full object-cover z-0" />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }} className="relative z-10 mt-16">
+          <h1 className="text-5xl xl:text-6xl font-extrabold text-white mb-6 leading-[1.15] tracking-tight drop-shadow-sm"> You're All Set!</h1>
+          <p className="text-blue-50 text-lg xl:text-xl font-medium max-w-md leading-relaxed drop-shadow-sm">Your business is fully verified. Download your TrustBridge ID or head straight to your dashboard.</p>
+        </motion.div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 0.8 }} className="relative z-10 flex items-center gap-2 drop-shadow-sm">
+          <Logo />
+          <span className="text-white font-bold text-2xl tracking-tight">TrustBridge</span>
         </motion.div>
       </div>
 

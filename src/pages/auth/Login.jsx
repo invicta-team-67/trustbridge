@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase'; 
+import Logo from '../../components/logo2';
 
 // --- INLINE ICONS ---
 const MailIcon = () => (
@@ -179,8 +180,10 @@ const Login = () => {
           transition={{ delay: 0.5, duration: 0.8 }}
           className="relative z-10 flex items-center gap-2 drop-shadow-sm"
         >
-          <LogoIcon />
-          <span className="text-white font-bold text-2xl tracking-tight">TrustBridge</span>
+        <div className="flex items-center gap-2 cursor-pointer">
+  <Logo />
+  <span className="font-bold text-xl text-[#fcfcfc]">TrustBridge</span>
+</div>
         </motion.div>
       </div>
 

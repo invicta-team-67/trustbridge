@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase'; //IMPORT THE SUPABASE
+import Logo from '../../components/logo';
 
 // --- INLINE ICONS ---
 const MailIcon = () => (
@@ -86,10 +87,10 @@ const ForgotPassword = () => {
       
       {/* Top Navigation Bar */}
       <header className="bg-white px-8 py-4 flex items-center shadow-sm w-full">
-        <div className="flex items-center gap-2">
-          <TrustBridgeLogo />
-          <span className="text-[#0f172a] font-extrabold text-xl tracking-tight">TrustBridge</span>
-        </div>
+        <div className="flex items-center gap-2 cursor-pointer">
+  <Logo />
+  <span className="font-bold text-xl text-[#0f172a]">TrustBridge</span>
+</div>
       </header>
 
       {/* Main Content Area */}

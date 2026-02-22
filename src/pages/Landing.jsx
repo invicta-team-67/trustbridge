@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import Logo from '../components/logo';
 // --- ICONS (Inline SVGs) ---
 const DocumentXIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-700">
@@ -46,10 +47,10 @@ const Navbar = () => {
       transition={{ duration: 0.6 }}
       className="max-w-7xl mx-auto px-6 lg:px-12 py-6 flex justify-between items-center"
     >
-      <div className="flex items-center gap-2 cursor-pointer">
-        <img src="../public/landing-images/logo-bg.svg" alt="TrustBridge Logo" className="h-8 w-auto" />
-        <span className="font-bold text-xl text-[#0f172a]">TrustBridge</span>
-      </div>
+<div className="flex items-center gap-2 cursor-pointer">
+  <Logo />
+  <span className="font-bold text-xl text-[#0f172a]">TrustBridge</span>
+</div>
 
       <div className="hidden md:flex gap-8 items-center text-sm font-semibold text-gray-600">
         <a href="#products" className="hover:text-blue-600 transition-colors">Products</a>
@@ -236,22 +237,56 @@ const ProblemSection = () => {
   );
 };
 
+// --- INLINE ICONS (Matching the design) ---
+const EditIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+);
+
+const UploadIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+);
+
+const TrendingIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+  </svg>
+);
+
 const HowItWorksSection = () => {
   const steps = [
     {
       id: 1,
-      title: "Record Transaction",
-      description: "Log your daily business activity easily through our intuitive mobile-first interface."
+      icon: <EditIcon />,
+      title: "1. Log Transaction",
+      description: "Record client name, service, amount, and due date in seconds."
     },
     {
       id: 2,
-      title: "Get Client Confirmation",
-      description: "Your clients receive a simple SMS or link to verify the service with a single click; no app needed."
+      icon: <UploadIcon />,
+      title: "2. Upload Proof",
+      description: "Add photos, receipts, or delivery confirmations as evidence."
     },
     {
       id: 3,
-      title: "Generate Trust Report",
-      description: "Export a verified history and a certified Trust Score for partners, vendors, and lenders."
+      icon: <CheckIcon />,
+      title: "3. Client Confirms",
+      description: "Send a simple link for clients to verify completion."
+    },
+    {
+      id: 4,
+      icon: <TrendingIcon />,
+      title: "4. Build Trust Score",
+      description: "Your score grows with each verified transaction."
     }
   ];
 
@@ -262,68 +297,60 @@ const HowItWorksSection = () => {
 
   const stepContainerVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.3, delayChildren: 0.2 } }
+    visible: { opacity: 1, transition: { staggerChildren: 0.2, delayChildren: 0.1 } }
   };
 
   const stepVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
   };
 
   return (
-    <section className="bg-[#f8f9fc] py-16 lg:py-24 px-6 lg:px-12 overflow-hidden">
-      <div className="max-w-6xl mx-auto">
+    <section className="bg-[#f5f8fc] py-20 lg:py-32 px-6 lg:px-12 overflow-hidden">
+      <div className="max-w-7xl mx-auto">
         
+        {/* Header */}
         <motion.div 
-          className="text-center mb-16 lg:mb-20"
+          className="text-center mb-16 lg:mb-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.5 }}
           variants={headerVariants}
         >
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#0f172a] tracking-tight">
-            TrustBridge Makes Informal Activity Verifiable.
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-[#0f172a] tracking-tight mb-4">
+            A Simpler Path to Credibility
           </h2>
+          <p className="text-gray-500 font-medium text-lg lg:text-xl">
+            Four simple steps in building verifiable trust
+          </p>
         </motion.div>
 
+        {/* 4-Step Grid */}
         <motion.div 
-          className="flex flex-col md:flex-row relative justify-between gap-12 md:gap-0"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.2 }}
           variants={stepContainerVariants}
         >
-          {/* Horizontal Line Connecting Circles (Desktop Only) */}
-          <div className="hidden md:block absolute top-[36px] left-[15%] right-[15%] h-[2px] bg-blue-100 -z-10">
-            <motion.div 
-              className="h-full bg-[#1a56db]"
-              initial={{ scaleX: 0, transformOrigin: "left" }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 1.5, ease: "easeInOut", delay: 0.5 }}
-            />
-          </div>
-
           {steps.map((step) => (
             <motion.div 
               key={step.id} 
               variants={stepVariants}
-              className="flex-1 flex flex-col items-center text-center px-4 relative"
+              className="flex flex-col items-center h-full"
             >
-              {/* Number Circle */}
-              <div className="w-[72px] h-[72px] rounded-full bg-[#1a56db] text-white flex items-center justify-center text-2xl font-bold mb-6 shadow-lg shadow-blue-500/20 z-10 relative">
-                {step.id}
-                
-                {/* Vertical line for mobile ONLY (drops down to the next circle) */}
-                {step.id !== steps.length && (
-                  <div className="md:hidden absolute top-[72px] h-[48px] w-[2px] bg-blue-100 -z-10" />
-                )}
+              {/* Floating Icon Circle */}
+              <div className="w-[72px] h-[72px] rounded-full bg-[#1a56db] text-white flex items-center justify-center mb-6 shadow-md shadow-blue-500/20 z-10">
+                {step.icon}
               </div>
               
-              <h3 className="text-xl font-bold text-[#0f172a] mb-3">{step.title}</h3>
-              <p className="text-gray-500 font-medium leading-relaxed max-w-sm">
-                {step.description}
-              </p>
+              {/* White Content Card */}
+              <div className="bg-white px-6 py-8 rounded-2xl shadow-sm border border-gray-100 text-center w-full flex-1 flex flex-col justify-start transition-all hover:shadow-md hover:border-blue-100">
+                <h3 className="text-lg font-bold text-[#0f172a] mb-3">{step.title}</h3>
+                <p className="text-[13.5px] text-gray-500 font-medium leading-relaxed">
+                  {step.description}
+                </p>
+              </div>
             </motion.div>
           ))}
         </motion.div>
@@ -332,6 +359,8 @@ const HowItWorksSection = () => {
     </section>
   );
 };
+
+
 
 const ScrollToTopButton = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -718,10 +747,10 @@ const FooterSection = () => {
           
           {/* Brand Column */}
           <div className="lg:col-span-2 flex flex-col gap-6">
-            <div className="flex items-center gap-2 cursor-pointer">
-              <img src="../public/landing-images/logo-bg.svg" alt="TrustBridge Logo" className="h-8 w-auto" />
-              <span className="font-bold text-xl text-[#0f172a]">TrustBridge</span>
-            </div>
+          <div className="flex items-center gap-2 cursor-pointer">
+  <Logo />
+  <span className="font-bold text-xl text-[#0f172a]">TrustBridge</span>
+</div>
             <p className="text-[#334155] text-sm font-medium leading-relaxed max-w-sm">
               Building financial identities for the informal economy. We turn everyday transactions into verifiable growth opportunities.
             </p>

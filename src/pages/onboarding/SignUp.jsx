@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase'; 
+import Logo from '../../components/logo2';
 
 // --- INLINE ICONS ---
 const BuildingIcon = () => (
@@ -179,7 +180,7 @@ const SignUp = () => {
           <p className="text-blue-50 text-lg xl:text-xl font-medium max-w-md leading-relaxed drop-shadow-sm">Start building your verified business history in minutes</p>
         </motion.div>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 0.8 }} className="relative z-10 flex items-center gap-2 drop-shadow-sm">
-          <LogoIcon />
+          <Logo />
           <span className="text-white font-bold text-2xl tracking-tight">TrustBridge</span>
         </motion.div>
       </div>

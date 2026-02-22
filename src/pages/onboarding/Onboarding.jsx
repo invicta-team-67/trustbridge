@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import StepOne from './StepOne'; 
 import StepTwo from './StepTwo'; 
 import StepThree from './StepThree'; 
+import Logo from '../../components/logo2';
 
 // --- INLINE ICONS ---
 const ShieldIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2-1 4-2 8-2 2 0 7 2 7 2a1 1 0 0 1 1 1v7z"/></svg>;
@@ -164,13 +165,17 @@ const Onboarding = () => {
     <div className="min-h-screen w-full flex bg-white font-sans text-[#0f172a]">
       
       {/* Left Column: Branding */}
-      <div className="hidden lg:flex w-[40%] relative overflow-hidden flex-col justify-center p-12 xl:p-20 h-screen sticky top-0">
-        <img src="/auth-images/img-container.png" alt="Background" className="absolute inset-0 w-full h-full object-cover z-0" />
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }} className="relative z-10">
-          <h1 className="text-4xl xl:text-5xl font-extrabold text-white mb-6 leading-[1.15] tracking-tight drop-shadow-sm">Welcome on Board</h1>
-          <p className="text-blue-50 text-lg font-medium max-w-sm leading-relaxed drop-shadow-sm">Start building your verified business history in minutes</p>
-        </motion.div>
-      </div>
+            <div className="hidden lg:flex w-1/2 relative overflow-hidden flex-col justify-between p-12 xl:p-20 h-screen sticky top-0">
+              <img src="/auth-images/img-container.png" alt="Background" className="absolute inset-0 w-full h-full object-cover z-0" />
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }} className="relative z-10 mt-16">
+                <h1 className="text-5xl xl:text-6xl font-extrabold text-white mb-6 leading-[1.15] tracking-tight drop-shadow-sm">Welcome on Board</h1>
+                <p className="text-blue-50 text-lg xl:text-xl font-medium max-w-md leading-relaxed drop-shadow-sm">Start building your verified business history in minutes</p>
+              </motion.div>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 0.8 }} className="relative z-10 flex items-center gap-2 drop-shadow-sm">
+                <Logo />
+                <span className="text-white font-bold text-2xl tracking-tight">TrustBridge</span>
+              </motion.div>
+            </div>
 
       {/* Right Column: Form Container */}
       <div className="w-full lg:w-[60%] flex flex-col items-center py-8 px-6 sm:px-12 h-screen overflow-y-auto">
