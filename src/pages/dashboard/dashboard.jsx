@@ -5,7 +5,7 @@ import {
   ShieldCheck, Settings, LogOut, Search, Bell, Menu, X,
   ChevronRight, AlertCircle, TrendingUp, CheckCircle2, AlertTriangle, Download
 } from 'lucide-react';
-import Logo from '../../components/logo'; // Using your new global logo!
+import Logo from '../../components/logo'; // Make sure this path is correct!
 
 // --- MOCK DATA ---
 const stats = [
@@ -28,17 +28,32 @@ const insights = [
 
 export default function Dashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // NEW: Desktop Sidebar State
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
 
   // --- COMPONENTS ---
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-white border-r border-gray-100">
-      <div className="p-6 flex items-center gap-3">
-        <Logo size="w-8 h-8" />
-        <span className="font-bold text-xl text-[#0f172a]">TrustBridge</span>
+  // Added onDesktopClose prop
+  const SidebarContent = ({ onDesktopClose }) => (
+    <div className="flex flex-col h-full bg-white border-r border-gray-100 w-64">
+      <div className="p-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Logo size="w-8 h-8" />
+          <span className="font-bold text-xl text-[#0f172a]">TrustBridge</span>
+        </div>
+        
+        {/* NEW: Desktop Close Button */}
+        {onDesktopClose && (
+          <button 
+            onClick={onDesktopClose} 
+            className="hidden lg:block p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-1">
+      <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
         <a href="#" className="flex items-center gap-3 px-4 py-3 bg-blue-50 text-[#1a56db] font-semibold rounded-lg transition-colors">
           <LayoutDashboard className="w-5 h-5" /> Dashboard
         </a>
@@ -70,10 +85,20 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen bg-[#f8fafc] overflow-hidden font-sans text-[#0f172a]">
       
-      {/* --- DESKTOP SIDEBAR --- */}
-      <aside className="hidden lg:block w-64 h-full flex-shrink-0 z-20 shadow-sm">
-        <SidebarContent />
-      </aside>
+      {/* --- DESKTOP SIDEBAR (Animated) --- */}
+      <AnimatePresence initial={false}>
+        {isDesktopSidebarOpen && (
+          <motion.aside 
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 256, opacity: 1 }} // 256px = w-64
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="hidden lg:block h-full flex-shrink-0 z-20 shadow-sm overflow-hidden"
+          >
+            <SidebarContent onDesktopClose={() => setIsDesktopSidebarOpen(false)} />
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
       {/* --- MOBILE SIDEBAR OVERLAY --- */}
       <AnimatePresence>
@@ -86,10 +111,10 @@ export default function Dashboard() {
             />
             <motion.aside 
               initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} transition={{ type: "tween", duration: 0.3 }}
-              className="fixed inset-y-0 left-0 w-64 h-full z-50 lg:hidden shadow-2xl"
+              className="fixed inset-y-0 left-0 w-64 h-full z-50 lg:hidden shadow-2xl overflow-hidden"
             >
               <SidebarContent />
-              <button onClick={() => setIsMobileMenuOpen(false)} className="absolute top-6 right-4 p-1 bg-gray-100 rounded-full text-gray-500">
+              <button onClick={() => setIsMobileMenuOpen(false)} className="absolute top-6 right-4 p-1 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </motion.aside>
@@ -101,11 +126,25 @@ export default function Dashboard() {
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         
         {/* TOP NAVBAR */}
-        <header className="bg-white border-b border-gray-100 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 flex-shrink-0 z-10">
+        <header className="bg-white border-b border-gray-100 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 flex-shrink-0 z-10 transition-all duration-300">
           <div className="flex items-center gap-4">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-lg">
+            
+            {/* Mobile Hamburger */}
+            <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
               <Menu className="w-5 h-5" />
             </button>
+
+            {/* NEW: Desktop Hamburger (Shows only when sidebar is closed) */}
+            {!isDesktopSidebarOpen && (
+              <button 
+                onClick={() => setIsDesktopSidebarOpen(true)} 
+                className="hidden lg:block p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors mr-2"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* Breadcrumbs */}
             <div className="hidden sm:flex items-center text-sm font-medium text-gray-500">
               <span className="hover:text-gray-800 cursor-pointer">Home</span>
               <ChevronRight className="w-4 h-4 mx-1" />
@@ -171,7 +210,7 @@ export default function Dashboard() {
                   <h3 className="text-xl font-bold mb-2">Quick Actions</h3>
                   <p className="text-blue-100 text-sm font-medium leading-relaxed mb-6">Instantly log new transactions or manage pending verifications.</p>
                 </div>
-                <button className="bg-white text-[#1a56db] w-full py-3 rounded-xl text-sm font-bold shadow-md flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
+                <button className="bg-white text-[#1a56db] w-full py-3 rounded-xl text-sm font-bold shadow-md flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors z-10">
                   <PlusCircle className="w-5 h-5" /> Log New Transaction
                 </button>
               </div>
