@@ -10,6 +10,7 @@ import ResetPassword from './pages/auth/ResetPassword';
 import PasswordResetSuccess from './pages/auth/PasswordResetSuccess';
 import VerifiedCertificate from './pages/onboarding/VerifiedCertificate';
 import Dashboard from './pages/dashboard/dashboard';
+import TransactionDashboard from './pages/transaction/TransactionDashboard';
 
 const App = () => {
   return (
@@ -25,6 +26,7 @@ const App = () => {
         <Route path="/onboarding" element={<Onboarding />} />   
         <Route path="/certificate" element={<VerifiedCertificate />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/transaction-dashboard" element={<TransactionDashboard/>} />
       </Routes>
     </Router>
   );
