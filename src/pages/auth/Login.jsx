@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; // Updated Import
 import { supabase } from '../../lib/supabase'; 
 import Logo from '../../components/logo2';
 
@@ -116,7 +116,7 @@ const Login = () => {
         password: password,
       });
 
-if (error) {
+      if (error) {
         setGeneralError('Invalid email or password. Please try again.'); 
       } else if (data.user) {
         navigate('/dashboard');
@@ -127,6 +127,7 @@ if (error) {
       setIsLoading(false);
     }
   };
+
   const handleSocialLogin = async (provider) => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -170,9 +171,9 @@ if (error) {
           className="relative z-10 flex items-center gap-2 drop-shadow-sm"
         >
         <div className="flex items-center gap-2 cursor-pointer">
-  <Logo />
-  <span className="font-bold text-xl text-[#fcfcfc]">TrustBridge</span>
-</div>
+          <Logo />
+          <span className="font-bold text-xl text-[#fcfcfc]">TrustBridge</span>
+        </div>
         </motion.div>
       </div>
 
@@ -311,7 +312,7 @@ if (error) {
 
             {/* Switch to Sign Up */}
             <p className="text-center text-sm text-gray-500 font-medium mt-6">
-              Don't have an account? <a href="/signup" className="text-[#1a56db] font-bold hover:underline">Sign Up</a>
+              Don't have an account? <Link to="/signup" className="text-[#1a56db] font-bold hover:underline">Sign Up</Link>
             </p>
 
           </form>

@@ -98,8 +98,12 @@ const ResetPassword = () => {
       if (updateError) {
         setError(updateError.message);
       } else {
-        //Instantly redirect to the dedicated success page
-        navigate('/reset-success');
+        // Redirect to login after successful reset
+        // You can change this to '/reset-success' if you have that page
+        setIsSuccess(true);
+        setTimeout(() => {
+            navigate('/login');
+        }, 2000);
       }
     } catch (err) {
       setError('An unexpected error occurred. Your reset link may have expired.');
@@ -107,6 +111,7 @@ const ResetPassword = () => {
       setIsLoading(false);
     }
   };
+
   return (
     <div className="min-h-screen w-full flex flex-col bg-[#f5f8fc] font-sans text-[#0f172a]">
       

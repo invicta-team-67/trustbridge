@@ -65,8 +65,8 @@ const ForgotPassword = () => {
       //Supabase Call
       // Supabase will automatically send an email to this address with a secure link
       const { error: supabaseError } = await supabase.auth.resetPasswordForEmail(email, {
-        // The URL  link will be changed to the live site once deployed
-        redirectTo: 'http://localhost:5173/reset-password', 
+        // The URL link uses window.location.origin to work dynamically on Localhost AND Netlify
+        redirectTo: `${window.location.origin}/reset-password`, 
       });
 
       if (supabaseError) {
@@ -88,9 +88,9 @@ const ForgotPassword = () => {
       {/* Top Navigation Bar */}
       <header className="bg-white px-8 py-4 flex items-center shadow-sm w-full">
         <div className="flex items-center gap-2 cursor-pointer">
-  <Logo />
-  <span className="font-bold text-xl text-[#0f172a]">TrustBridge</span>
-</div>
+          <Logo />
+          <span className="font-bold text-xl text-[#0f172a]">TrustBridge</span>
+        </div>
       </header>
 
       {/* Main Content Area */}
