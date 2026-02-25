@@ -10,6 +10,8 @@ import Onboarding from "./pages/onboarding/Onboarding";
 import SignUp from "./pages/onboarding/SignUp";
 import VerifiedCertificate from "./pages/onboarding/VerifiedCertificate";
 import TransactionLayout from "./pages/transaction/TransactionLayout";
+import TransactionSuccess from "./pages/transaction/TransactionSuccess";
+import TransactionSuccessLayout from "./pages/transaction/TransactionSuccessfulLayout";
 
 const App = () => {
   return (
@@ -26,7 +28,7 @@ const App = () => {
         <Route path="/certificate" element={<VerifiedCertificate />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/new-transaction" element={<TransactionLayout />} />
-        
+        <Route path="/transaction-success" element={<TransactionSuccessLayout />} />
       </Routes>
     </Router>
   );
