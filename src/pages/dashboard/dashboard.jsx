@@ -1,13 +1,13 @@
-import React, { useEffect } from 'react'; // Updated import
+import React, { useEffect } from 'react'; 
 import { 
   LayoutDashboard, CreditCard, PlusSquare, ShieldCheck, 
   FileText, Settings, LogOut, Bell, Search, AlertCircle, 
-  ArrowUpRight, ArrowDownRight, Zap, Download, MoreHorizontal, ChevronRight
+  ArrowUpRight, ArrowDownRight, Zap, Download, ChevronRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { supabase } from '../../lib/supabase'; // 1. CONNECTED: Import Supabase
+import { AreaChart, Area, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { supabase } from '../../lib/supabase'; 
 
 // Data strictly following the chart in your image
 const transactionData = [
@@ -23,7 +23,7 @@ const transactionData = [
 const TrustBridgeDashboard = () => {
   const navigate = useNavigate();
 
-  // 2. CONNECTED: Auth Guard - Protects the route
+  // Auth Guard
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -34,7 +34,7 @@ const TrustBridgeDashboard = () => {
     checkSession();
   }, [navigate]);
 
-  // 3. CONNECTED: Logout Logic
+  // Logout Logic
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
@@ -86,7 +86,7 @@ const TrustBridgeDashboard = () => {
 
         <div className="p-8">
           <button 
-            onClick={handleLogout} // 4. CONNECTED: Logout Trigger
+            onClick={handleLogout}
             className="flex items-center gap-3 text-slate-400 hover:text-rose-500 transition-all font-medium"
           >
             <LogOut size={20} />
@@ -156,7 +156,12 @@ const TrustBridgeDashboard = () => {
                 Your business trust rating has improved by <span className="text-emerald-500 font-bold">4 points</span> since last month. High verification rates are positively impacting your score.
               </p>
               <div className="flex gap-4 mt-6">
-                <button className="bg-[#003399] text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-800 transition-all shadow-lg shadow-blue-200">View Detailed Report</button>
+                <button 
+                  onClick={() => navigate('/trust-report')}
+                  className="bg-[#003399] text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-800 transition-all shadow-lg shadow-blue-200"
+                >
+                  View Detailed Report
+                </button>
                 <button className="border border-blue-100 text-[#003399] px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all">Download</button>
               </div>
             </div>
@@ -167,7 +172,10 @@ const TrustBridgeDashboard = () => {
               <h3 className="text-xl font-bold mb-2">Quick Actions</h3>
               <p className="text-blue-200 text-sm leading-snug">Instantly log new transactions or manage pending notifications.</p>
             </div>
-            <button className="w-full bg-white text-[#003399] py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-blue-50 transition-transform active:scale-95">
+            <button 
+              onClick={() => navigate('/log-new-transaction')}
+              className="w-full bg-white text-[#003399] py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-blue-50 transition-transform active:scale-95"
+            >
               <PlusSquare size={20} />
               Log New Transaction
             </button>
@@ -184,7 +192,12 @@ const TrustBridgeDashboard = () => {
               <span className="font-bold text-slate-800">Priority Alert</span> &nbsp; Verification pending for "TechSolutions Inc" transaction (₦68,500). Needs immediate review.
             </p>
           </div>
-          <button className="bg-[#003399] text-white px-6 py-2 rounded-xl text-xs font-black shadow-md hover:bg-blue-800">Review Now</button>
+          <button 
+            onClick={() => navigate('/transaction-verification')}
+            className="bg-[#003399] text-white px-6 py-2 rounded-xl text-xs font-black shadow-md hover:bg-blue-800"
+          >
+            Review Now
+          </button>
         </motion.div>
 
         {/* Stats & Growth Section */}
@@ -239,18 +252,18 @@ const TrustBridgeDashboard = () => {
 
           {/* AI Insights Panel */}
           <motion.div variants={itemVariants} className="col-span-3">
-              <div className="bg-white p-8 rounded-[32px] shadow-sm h-full border border-white">
-                 <div className="flex items-center gap-2 mb-8">
-                   <Zap size={20} className="text-blue-500 fill-blue-500" />
-                   <h3 className="font-bold text-slate-800">AI Insights</h3>
-                 </div>
-                 <div className="space-y-5">
-                   <InsightCard type="warning" title="Medium Risk Detected" desc="High risk patterns detected in 3 recent transfers from new IP locations." />
-                   <InsightCard type="info" title="Improve Score" desc="Verify past obscure company profile to increase your Trust Score by +5 points." />
-                   <InsightCard type="success" title="Verification Tip" desc="Enable 2FA for all team members to satisfy security audit requirements." />
-                 </div>
-                 <button className="w-full text-center mt-12 text-xs font-bold text-slate-400 hover:text-blue-600 transition-all uppercase tracking-widest">View All Insights</button>
-              </div>
+             <div className="bg-white p-8 rounded-[32px] shadow-sm h-full border border-white">
+                <div className="flex items-center gap-2 mb-8">
+                  <Zap size={20} className="text-blue-500 fill-blue-500" />
+                  <h3 className="font-bold text-slate-800">AI Insights</h3>
+                </div>
+                <div className="space-y-5">
+                  <InsightCard type="warning" title="Medium Risk Detected" desc="High risk patterns detected in 3 recent transfers from new IP locations." />
+                  <InsightCard type="info" title="Improve Score" desc="Verify past obscure company profile to increase your Trust Score by +5 points." />
+                  <InsightCard type="success" title="Verification Tip" desc="Enable 2FA for all team members to satisfy security audit requirements." />
+                </div>
+                <button className="w-full text-center mt-12 text-xs font-bold text-slate-400 hover:text-blue-600 transition-all uppercase tracking-widest">View All Insights</button>
+             </div>
           </motion.div>
         </div>
 
@@ -262,7 +275,10 @@ const TrustBridgeDashboard = () => {
               <button className="flex items-center gap-2 px-5 py-2 border border-slate-100 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50">
                 <Download size={16}/> Export CSV
               </button>
-              <button className="flex items-center gap-2 px-5 py-2 bg-[#003399] rounded-xl text-xs font-bold text-white shadow-lg shadow-blue-100">
+              <button 
+                onClick={() => navigate('/log-new-transaction')}
+                className="flex items-center gap-2 px-5 py-2 bg-[#003399] rounded-xl text-xs font-bold text-white shadow-lg shadow-blue-100"
+              >
                 <PlusSquare size={16}/> New Transaction
               </button>
             </div>
@@ -279,9 +295,18 @@ const TrustBridgeDashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                <TableRow name="Nexus Labs" amount="₦45,200.00" status="Verified" date="Jan 24, 2026" color="bg-blue-500" />
-                <TableRow name="Apex Ventures" amount="₦12,300.00" status="Pending" date="Feb 12, 2026" color="bg-purple-500" />
-                <TableRow name="TechSolutions Inc" amount="₦68,500.00" status="Blocked" date="Dec 21, 2025" color="bg-orange-500" />
+                <TableRow 
+                  name="Nexus Labs" amount="₦45,200.00" status="Verified" date="January 24, 2026" color="bg-blue-500" 
+                  onClick={() => navigate('/transaction-receipt')} 
+                />
+                <TableRow 
+                  name="Apex Ventures" amount="₦12,300.00" status="Pending" date="February 12, 2026" color="bg-purple-500" 
+                  onClick={() => navigate('/transaction-receipt')} 
+                />
+                <TableRow 
+                  name="TechSolutions Inc" amount="₦68,500.00" status="Blocked" date="December 21, 2025" color="bg-orange-500" 
+                  onClick={() => navigate('/transaction-receipt')} 
+                />
               </tbody>
             </table>
           </div>
@@ -289,22 +314,22 @@ const TrustBridgeDashboard = () => {
 
         {/* Promo Footer */}
         <motion.div variants={itemVariants} className="bg-[#000F2E] rounded-[32px] p-10 relative overflow-hidden flex justify-between items-center text-white">
-            <div className="z-10">
+           <div className="z-10">
               <h4 className="text-2xl font-bold mb-2">Ready for more advanced insights?</h4>
               <p className="text-slate-400 text-sm">Upgrade to Enterprise Pro to unlock detailed analytics and priority support.</p>
-            </div>
-            <div className="flex gap-4 z-10">
+           </div>
+           <div className="flex gap-4 z-10">
               <button className="bg-white text-slate-900 px-8 py-3 rounded-2xl font-black text-sm hover:shadow-xl transition-all">Upgrade Plan</button>
               <button className="bg-slate-800/50 backdrop-blur-md px-8 py-3 rounded-2xl font-black text-sm border border-slate-700">Dismiss</button>
-            </div>
-            <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] -mr-20 -mt-20"></div>
+           </div>
+           <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] -mr-20 -mt-20"></div>
         </motion.div>
       </motion.main>
     </div>
   );
 };
 
-// --- HELPER COMPONENTS ---
+// --- SUB-COMPONENTS ---
 
 const NavItem = ({ icon, label, active = false }) => (
   <div className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl cursor-pointer transition-all font-bold text-sm ${active ? 'bg-[#EBF2FF] text-[#003399]' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}>
@@ -345,7 +370,7 @@ const InsightCard = ({ type, title, desc }) => {
   );
 };
 
-const TableRow = ({ name, amount, status, date, color }) => (
+const TableRow = ({ name, amount, status, date, color, onClick }) => (
   <tr className="hover:bg-slate-50 transition-colors group cursor-pointer">
     <td className="px-8 py-6">
       <div className="flex items-center gap-3">
@@ -366,7 +391,7 @@ const TableRow = ({ name, amount, status, date, color }) => (
     </td>
     <td className="px-8 py-6 text-sm font-bold text-slate-400">{date}</td>
     <td className="px-8 py-6">
-      <button className="text-[#003399] font-black text-xs hover:underline">View Details</button>
+      <button onClick={onClick} className="text-[#003399] font-black text-xs hover:underline">View Details</button>
     </td>
   </tr>
 );
