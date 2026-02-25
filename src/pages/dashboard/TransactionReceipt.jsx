@@ -12,8 +12,8 @@ import {
   Download,
   ShieldAlert,
   CloudCheck,
-  Menu, // Imported for mobile
-  X     // Imported for mobile
+  Menu, 
+  X     
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
@@ -21,37 +21,80 @@ import { supabase } from '../../lib/supabase';
 
 const TransactionReceipt = () => {
   const navigate = useNavigate();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // State for dynamic receipt data (Initialized with default/loading state)
+  const [receiptData, setReceiptData] = useState({
+    receiptNo: 'Loading...',
+    issueDate: 'Loading...',
+    paymentMethod: 'Direct Transfer',
+    reference: 'Loading...',
+    serviceProvider: 'Loading...',
+    clientName: 'Loading...',
+    serviceDescription: 'Loading...',
+    subtotal: '₦0.00',
+    vat: '₦0.00',
+    totalAmount: '₦0.00' 
+  });
 
-  // 2. CONNECTED: Auth Guard - Protects the receipt view
+  // 2. CONNECTED: Auth Guard & Data Fetching
   useEffect(() => {
-    const checkSession = async () => {
+    const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate('/login');
+        return;
+      }
+
+      try {
+        // 1. Fetch the User's Profile (for Service Provider Name)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('business_name')
+          .eq('id', session.user.id)
+          .single();
+
+        // 2. Fetch the Most Recent Transaction
+        const { data: transaction, error } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (transaction) {
+          // Calculate Financials
+          const amount = parseFloat(transaction.amount) || 0;
+          const vat = amount * 0.075; // 7.5% VAT
+          const subtotal = amount - vat;
+
+          // Update State with Real Data
+          setReceiptData({
+            receiptNo: `TB-${transaction.id.substring(0, 8).toUpperCase()}`,
+            issueDate: new Date(transaction.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+            paymentMethod: 'Direct Transfer',
+            reference: `TRX-${transaction.id.substring(9, 13).toUpperCase()}-OP`,
+            serviceProvider: profile?.business_name || 'Verified Merchant',
+            clientName: transaction.client_name,
+            serviceDescription: transaction.service_provided,
+            subtotal: `₦${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+            vat: `₦${vat.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+            totalAmount: `₦${amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` 
+          });
+        }
+      } catch (err) {
+        console.error("Error generating receipt:", err);
       }
     };
-    checkSession();
+
+    fetchData();
   }, [navigate]);
 
   // 3. CONNECTED: Logout Logic
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
-  };
-
-  // Data strictly following the receipt image
-  const receiptData = {
-    receiptNo: 'TB-9923485710',
-    issueDate: 'October 24, 2023',
-    paymentMethod: 'Direct Transfer',
-    reference: 'TRX-7721-OP-90',
-    serviceProvider: 'Acme Corporation',
-    clientName: 'John Doe',
-    serviceDescription: 'Strategic Advisory Phase 1',
-    subtotal: '₦232,558.14',
-    vat: '₦17,441.86',
-    totalAmount: '₦250,000.00' 
   };
 
   const handlePrint = () => {
@@ -146,7 +189,7 @@ const TransactionReceipt = () => {
               <Menu size={20} />
             </button>
             <button 
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/transaction-dashboard')}
               className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm font-bold transition-all"
             >
               <ChevronLeft size={18} /> Back to Dashboard
@@ -241,7 +284,7 @@ const TransactionReceipt = () => {
             <div className="grid grid-cols-12 items-start">
               <div className="col-span-8 pr-2">
                 <p className="text-sm font-bold text-slate-800">Service Description</p>
-                <p className="text-xs text-slate-400 font-medium">Cloud & Devops Consulting</p>
+                <p className="text-xs text-slate-400 font-medium">Details of service rendered</p>
               </div>
               <div className="col-span-4 text-right">
                 <p className="text-sm font-bold text-slate-800 break-words">{receiptData.serviceDescription}</p>

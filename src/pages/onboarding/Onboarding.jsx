@@ -44,13 +44,23 @@ const Onboarding = () => {
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // We check if a profile already exists or if metadata is available
         const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        
         if (data) {
           setFormData(prev => ({
             ...prev,
-            businessName: data.business_name || '',
-            businessType: data.business_type || '',
-            industry: data.industry || ''
+            businessName: data.business_name || user.user_metadata.business_name || '',
+            businessType: data.business_type || user.user_metadata.business_type || '',
+            industry: data.industry || user.user_metadata.industry || ''
+          }));
+        } else if (user.user_metadata) {
+           // Fallback to metadata if profile row isn't fully ready yet
+           setFormData(prev => ({
+            ...prev,
+            businessName: user.user_metadata.business_name || '',
+            businessType: user.user_metadata.business_type || '',
+            industry: user.user_metadata.industry || ''
           }));
         }
       }
@@ -133,9 +143,11 @@ const Onboarding = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user logged in. Please sign in again.");
 
+      // Upsert: Create or Update the profile
       const { error: dbError } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: user.id, // Ensure we link to the Auth ID
           business_name: formData.businessName,
           registration_number: formData.registrationNumber,
           industry: formData.primaryIndustry || formData.industry, 
@@ -145,14 +157,17 @@ const Onboarding = () => {
           address: formData.address,
           business_type: formData.businessType,
           description: formData.description,
-          verification_status: 'pending' 
-        })
-        .eq('id', user.id); 
+          verification_status: 'pending',
+          updated_at: new Date()
+        }); 
 
       if (dbError) throw dbError;
+      
+      // Navigate to certificate/success page
       navigate('/certificate');
 
     } catch (err) {
+      console.error(err); // Log for debugging
       setGlobalError("Failed to save profile. Please check your connection.");
     } finally {
       setIsLoading(false);

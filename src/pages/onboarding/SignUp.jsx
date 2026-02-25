@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, Link } from 'react-router-dom'; // Added Link here
+import { useNavigate, Link } from 'react-router-dom'; 
 import { supabase } from '../../lib/supabase'; 
 import Logo from '../../components/logo2';
 
@@ -395,7 +395,7 @@ const SignUp = () => {
               {isLoading ? 'Creating Account...' : 'Create Account'}
             </motion.button>
 
-            {/* Switch to Login (FIXED) */}
+            {/* Switch to Login */}
             <p className="text-center text-sm text-gray-500 font-medium mt-4">
               Already have an account? <Link to="/login" className="text-[#1a56db] font-bold hover:underline">Log in</Link>
             </p>

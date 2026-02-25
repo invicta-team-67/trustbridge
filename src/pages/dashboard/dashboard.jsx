@@ -3,12 +3,12 @@ import {
   LayoutDashboard, CreditCard, PlusSquare, ShieldCheck, 
   FileText, Settings, LogOut, Bell, Search, AlertCircle, 
   ArrowUpRight, ArrowDownRight, Zap, Download, ChevronRight,
-  Menu, X // Imported for mobile menu
+  Menu, X 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { supabase } from '../../lib/supabase'; 
+import { supabase } from '../../lib/supabase'; // <-- CONNECTED TO DB
 
 const transactionData = [
   { day: 'Mon', amount: 320 },
@@ -22,9 +22,9 @@ const transactionData = [
 
 const TrustBridgeDashboard = () => {
   const navigate = useNavigate();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // State for mobile sidebar
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Auth Guard
+  // 1. CONNECTED: Auth Guard
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -35,7 +35,7 @@ const TrustBridgeDashboard = () => {
     checkSession();
   }, [navigate]);
 
-  // Logout Logic
+  // 2. CONNECTED: Logout Logic
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
@@ -54,7 +54,7 @@ const TrustBridgeDashboard = () => {
     show: { y: 0, opacity: 1 }
   };
 
-  // Reusable Sidebar Content to avoid duplication
+  // Reusable Sidebar Content
   const SidebarContent = () => (
     <>
       <div className="p-8 flex items-center gap-2">
@@ -85,8 +85,8 @@ const TrustBridgeDashboard = () => {
 
       <div className="p-8">
         <button 
-          onClick={handleLogout}
-          className="flex items-center gap-3 text-slate-400 hover:text-rose-500 transition-all font-medium"
+          onClick={handleLogout} // <-- Connected Logout
+          className="flex items-center gap-3 text-slate-400 hover:text-rose-500 transition-all font-medium w-full text-left"
         >
           <LogOut size={20} />
           <span>Log out</span>

@@ -22,30 +22,60 @@ import { supabase } from '../../lib/supabase';
 const TransactionSuccess = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
+  
+  // State for dynamic transaction data
+  const [summary, setSummary] = useState({
+    clientName: 'Loading...',
+    amount: '₦0.00',
+    service: 'Loading...',
+    refId: 'Loading...'
+  });
 
-  // 2. CONNECTED: Auth Guard - Protects the success view
+  // 2. CONNECTED: Auth Guard & Data Fetching
   useEffect(() => {
-    const checkSession = async () => {
+    const fetchLatestTransaction = async () => {
+      // A. Check Session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate('/login');
+        return;
+      }
+
+      try {
+        // B. Fetch the most recently created transaction for this user
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          // C. Update UI with real data
+          setSummary({
+            clientName: data.client_name,
+            // Format amount to Naira
+            amount: `₦${parseFloat(data.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}`,
+            service: data.service_provided,
+            // Generate a clean Ref ID from the UUID
+            refId: `TX-${data.id.substring(0, 8).toUpperCase()}-2026`
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching transaction details:", err);
       }
     };
-    checkSession();
+
+    fetchLatestTransaction();
   }, [navigate]);
 
   // 3. CONNECTED: Logout Logic
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
-  };
-
-  // Mock data reflecting the summary in the image
-  const summary = {
-    clientName: 'Acme Corporation',
-    amount: '₦12,500.00',
-    service: 'Strategic Advisory Phase 1',
-    refId: 'TX-9902-XJ2-2023'
   };
 
   // Reusable Sidebar Content

@@ -13,21 +13,25 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
-  Menu, // Imported for mobile toggle
-  X     // Imported for mobile toggle
+  Menu, 
+  X     
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { motion, AnimatePresence } from 'framer-motion'; // Added AnimatePresence
+import { motion, AnimatePresence } from 'framer-motion'; 
 
 const TransactionDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile Menu State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
   const itemsPerPage = 7; 
 
-  // 2. CONNECTED: Auth Guard
+  // State for Transactions
+  const [transactions, setTransactions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 1. CONNECTED: Auth Guard
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -37,6 +41,61 @@ const TransactionDashboard = () => {
     };
     checkUser();
   }, [navigate]);
+
+  // 2. CONNECTED: Data Fetching from Supabase
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { data, error } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            // Map DB data to UI format
+            const mappedData = data.map((tx, index) => {
+              // Generate random colors for initials like in your mock data
+              const colors = [
+                'bg-blue-50 text-blue-500', 
+                'bg-orange-50 text-orange-500', 
+                'bg-purple-100 text-purple-500', 
+                'bg-green-50 text-green-500'
+              ];
+              const randomColor = colors[index % colors.length];
+              
+              return {
+                id: tx.id,
+                clientName: tx.client_name,
+                initials: tx.client_name.substring(0, 2).toUpperCase(),
+                initialColor: randomColor,
+                description: tx.service_provided, // Mapping service to description
+                amount: `₦${tx.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`,
+                date: new Date(tx.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+                status: tx.status || 'Pending'
+              };
+            });
+            setTransactions(mappedData);
+          } else {
+            // Fallback to mock data if DB is empty so UI isn't blank
+            setTransactions(mockTransactions);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching transactions:", err);
+        setTransactions(mockTransactions); // Fallback on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
 
   // 3. CONNECTED: Logout Functionality
   const handleLogout = async () => {
@@ -48,8 +107,8 @@ const TransactionDashboard = () => {
     setCurrentPage(1);
   }, [activeTab]);
 
-  // --- DATA ---
-  const allTransactions = [
+  // --- MOCK DATA (Fallback) ---
+  const mockTransactions = [
     { id: 1, clientName: 'Julianne Deaton', initials: 'JD', initialColor: 'bg-blue-50 text-blue-500', description: 'Quarterly Asset Management Fee', amount: '₦4,800,000.00', date: '14 Feb, 2026', status: 'Verified' },
     { id: 2, clientName: 'Marcus Kholi', initials: 'MK', initialColor: 'bg-orange-50 text-orange-500', description: 'Escrow Holding Release - Prop A', amount: '₦8,800,000.00', date: '14 Feb, 2026', status: 'Pending' },
     { id: 3, clientName: 'Sovereign Tech Ltd', initials: 'ST', initialColor: 'bg-purple-100 text-purple-500', description: 'Treasury Note Purchase', amount: '₦1,900,000.00', date: '15 Feb, 2026', status: 'Awaiting' },
@@ -57,16 +116,6 @@ const TransactionDashboard = () => {
     { id: 5, clientName: 'Blue-Tree Holdings', initials: 'BT', initialColor: 'bg-red-100 text-red-500', description: 'Wire Transfer Rejection Fee', amount: '₦3,800,000.00', date: '16 Feb, 2026', status: 'Disputed' },
     { id: 6, clientName: 'Aramide Adeyemi', initials: 'AA', initialColor: 'bg-green-50 text-green-500', description: 'Corporate Bond Interest Payout', amount: '₦11,800,000.00', date: '16 Feb, 2026', status: 'Verified' },
     { id: 7, clientName: 'Adeyemi Araoye', initials: 'AA', initialColor: 'bg-green-50 text-green-500', description: 'Corporate Bond Interest Payout', amount: '₦11,800,000.00', date: '16 Feb, 2026', status: 'Verified' },
-    ...Array.from({ length: 35 }).map((_, i) => ({
-      id: 8 + i,
-      clientName: 'Institutional Client ' + (i + 1),
-      initials: 'IC',
-      initialColor: 'bg-slate-100 text-slate-500',
-      description: 'Standard Portfolio Rebalancing',
-      amount: '₦2,450,000.00',
-      date: '17 Feb, 2026',
-      status: i % 2 === 0 ? 'Verified' : 'Pending'
-    }))
   ];
 
   const getStatusStyles = (status) => {
@@ -79,7 +128,7 @@ const TransactionDashboard = () => {
     }
   };
 
-  const filteredTransactions = allTransactions.filter(tx => activeTab === 'All' || tx.status === activeTab);
+  const filteredTransactions = transactions.filter(tx => activeTab === 'All' || tx.status === activeTab);
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
   const currentItems = filteredTransactions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -245,34 +294,41 @@ const TransactionDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {currentItems.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ${tx.initialColor}`}>
-                            {tx.initials}
-                          </div>
-                          <span className="text-[13px] font-bold text-slate-700">{tx.clientName}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-[13px] text-slate-500 max-w-[240px] truncate">{tx.description}</td>
-                      <td className="px-6 py-4 text-[13px] font-bold text-slate-800">{tx.amount}</td>
-                      <td className="px-6 py-4 text-[13px] text-slate-500">{tx.date}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getStatusStyles(tx.status)}`}>
-                          {tx.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button 
-                          onClick={() => navigate('/transaction-receipt')}
-                          className="text-orange-500 font-bold text-[11px] hover:underline text-left leading-tight"
-                        >
-                          View<br/>Details
-                        </button>
-                      </td>
+                  {/* Loading State or Data Row */}
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-8 text-center text-sm text-slate-400">Loading transactions...</td>
                     </tr>
-                  ))}
+                  ) : (
+                    currentItems.map((tx) => (
+                      <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ${tx.initialColor}`}>
+                              {tx.initials}
+                            </div>
+                            <span className="text-[13px] font-bold text-slate-700">{tx.clientName}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-[13px] text-slate-500 max-w-[240px] truncate">{tx.description}</td>
+                        <td className="px-6 py-4 text-[13px] font-bold text-slate-800">{tx.amount}</td>
+                        <td className="px-6 py-4 text-[13px] text-slate-500">{tx.date}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getStatusStyles(tx.status)}`}>
+                            {tx.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button 
+                            onClick={() => navigate('/transaction-receipt')}
+                            className="text-orange-500 font-bold text-[11px] hover:underline text-left leading-tight"
+                          >
+                            View<br/>Details
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
