@@ -1,15 +1,15 @@
-import React, { useEffect } from 'react'; 
+import React, { useEffect, useState } from 'react'; 
 import { 
   LayoutDashboard, CreditCard, PlusSquare, ShieldCheck, 
   FileText, Settings, LogOut, Bell, Search, AlertCircle, 
-  ArrowUpRight, ArrowDownRight, Zap, Download, ChevronRight
+  ArrowUpRight, ArrowDownRight, Zap, Download, ChevronRight,
+  Menu, X // Imported for mobile menu
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { AreaChart, Area, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from '../../lib/supabase'; 
 
-// Data strictly following the chart in your image
 const transactionData = [
   { day: 'Mon', amount: 320 },
   { day: 'Tue', amount: 280 },
@@ -22,6 +22,7 @@ const transactionData = [
 
 const TrustBridgeDashboard = () => {
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // State for mobile sidebar
 
   // Auth Guard
   useEffect(() => {
@@ -53,91 +54,135 @@ const TrustBridgeDashboard = () => {
     show: { y: 0, opacity: 1 }
   };
 
+  // Reusable Sidebar Content to avoid duplication
+  const SidebarContent = () => (
+    <>
+      <div className="p-8 flex items-center gap-2">
+        <div className="bg-[#003399] p-1.5 rounded-lg">
+          <ShieldCheck className="text-white w-6 h-6" />
+        </div>
+        <h1 className="text-xl font-bold text-[#001B4D]">TrustBridge</h1>
+      </div>
+
+      <nav className="flex-1 px-6 space-y-2">
+        <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+          <NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" active />
+        </Link>
+        <Link to="/transaction-dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+          <NavItem icon={<CreditCard size={20}/>} label="Transaction" />
+        </Link>
+        <Link to="/log-new-transaction" onClick={() => setIsMobileMenuOpen(false)}>
+          <NavItem icon={<PlusSquare size={20}/>} label="Add Transaction" />
+        </Link>
+        <Link to="/trust-score" onClick={() => setIsMobileMenuOpen(false)}>
+          <NavItem icon={<ShieldCheck size={20}/>} label="Trust Score" />
+        </Link>
+        <Link to="/trust-report" onClick={() => setIsMobileMenuOpen(false)}>
+          <NavItem icon={<FileText size={20}/>} label="Report" />
+        </Link>
+        <NavItem icon={<Settings size={20}/>} label="Settings" />
+      </nav>
+
+      <div className="p-8">
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-3 text-slate-400 hover:text-rose-500 transition-all font-medium"
+        >
+          <LogOut size={20} />
+          <span>Log out</span>
+        </button>
+      </div>
+    </>
+  );
+
   return (
-    <div className="flex min-h-screen bg-[#F4F7FE] font-sans text-slate-700">
-      {/* --- SIDEBAR --- */}
-      <aside className="w-64 bg-white border-r border-slate-100 flex flex-col fixed h-full z-10">
-        <div className="p-8 flex items-center gap-2">
-          <div className="bg-[#003399] p-1.5 rounded-lg">
-            <ShieldCheck className="text-white w-6 h-6" />
-          </div>
-          <h1 className="text-xl font-bold text-[#001B4D]">TrustBridge</h1>
-        </div>
-
-        {/* Sidebar Navigation */}
-        <nav className="flex-1 px-6 space-y-2">
-          <Link to="/dashboard">
-            <NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" active />
-          </Link>
-          <Link to="/transaction-dashboard">
-            <NavItem icon={<CreditCard size={20}/>} label="Transaction" />
-          </Link>
-          <Link to="/log-new-transaction">
-            <NavItem icon={<PlusSquare size={20}/>} label="Add Transaction" />
-          </Link>
-          <Link to="/trust-score">
-            <NavItem icon={<ShieldCheck size={20}/>} label="Trust Score" />
-          </Link>
-          <Link to="/trust-report">
-            <NavItem icon={<FileText size={20}/>} label="Report" />
-          </Link>
-          <NavItem icon={<Settings size={20}/>} label="Settings" />
-        </nav>
-
-        <div className="p-8">
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-3 text-slate-400 hover:text-rose-500 transition-all font-medium"
-          >
-            <LogOut size={20} />
-            <span>Log out</span>
-          </button>
-        </div>
+    <div className="flex min-h-screen bg-[#F4F7FE] font-sans text-slate-700 relative overflow-x-hidden">
+      
+      {/* --- DESKTOP SIDEBAR (Hidden on mobile) --- */}
+      <aside className="hidden lg:flex w-64 bg-white border-r border-slate-100 flex-col fixed h-full z-10">
+        <SidebarContent />
       </aside>
+
+      {/* --- MOBILE SIDEBAR DRAWER --- */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
+            />
+            <motion.aside 
+              initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="fixed left-0 top-0 bottom-0 w-72 bg-white z-50 lg:hidden shadow-2xl flex flex-col"
+            >
+              <div className="absolute top-4 right-4">
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
+                  <X size={24} />
+                </button>
+              </div>
+              <SidebarContent />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* --- MAIN CONTENT --- */}
       <motion.main 
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="flex-1 ml-64 p-10"
+        className="flex-1 lg:ml-64 p-4 md:p-8 lg:p-10 w-full"
       >
         {/* Top Header */}
-        <header className="flex justify-between items-center mb-10">
-          <div className="flex items-center gap-2 text-sm text-slate-400">
-             <span>Home</span> <ChevronRight size={14}/> <span className="text-slate-800 font-semibold">Dashboard</span>
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            {/* Mobile Menu Button */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 bg-white rounded-lg shadow-sm border border-slate-200 text-slate-600"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="flex items-center gap-2 text-sm text-slate-400">
+               <span>Home</span> <ChevronRight size={14}/> <span className="text-slate-800 font-semibold">Dashboard</span>
+            </div>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="relative">
+
+          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+            <div className="relative flex-1 md:w-80">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
               <input 
                 type="text" 
-                placeholder="Search transactions, clients or reports..." 
-                className="w-80 pl-12 pr-4 py-2.5 rounded-full border-none bg-white shadow-sm focus:ring-2 focus:ring-blue-500/10 text-sm"
+                placeholder="Search..." 
+                className="w-full pl-12 pr-4 py-2.5 rounded-full border-none bg-white shadow-sm focus:ring-2 focus:ring-blue-500/10 text-sm"
               />
             </div>
-            <div className="relative p-2 bg-white rounded-full shadow-sm cursor-pointer">
-              <Bell size={20} className="text-slate-400" />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
-            </div>
-            <div className="flex items-center gap-3 border-l pl-6 border-slate-200">
-               <div className="text-right">
-                 <p className="text-sm font-bold text-slate-800 leading-none">Alex Bruno</p>
-                 <p className="text-[11px] text-slate-400 mt-1">Chief Security Officer</p>
-               </div>
-               <img src="https://ui-avatars.com/api/?name=Alex+Bruno&background=003399&color=fff" className="w-10 h-10 rounded-full border-2 border-white shadow-md" alt="profile" />
+            <div className="flex items-center gap-4">
+                <div className="relative p-2 bg-white rounded-full shadow-sm cursor-pointer hidden sm:block">
+                  <Bell size={20} className="text-slate-400" />
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+                </div>
+                <div className="flex items-center gap-3 border-l pl-0 sm:pl-6 border-slate-200">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-sm font-bold text-slate-800 leading-none">Alex Bruno</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Chief Security Officer</p>
+                  </div>
+                  <img src="https://ui-avatars.com/api/?name=Alex+Bruno&background=003399&color=fff" className="w-10 h-10 rounded-full border-2 border-white shadow-md" alt="profile" />
+                </div>
             </div>
           </div>
         </header>
 
         {/* Hero Cards */}
-        <div className="grid grid-cols-12 gap-6 mb-8">
-          <motion.div variants={itemVariants} className="col-span-8 bg-white p-8 rounded-[32px] flex items-center gap-10 shadow-sm border border-white">
-            <div className="relative w-36 h-36">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+          <motion.div variants={itemVariants} className="lg:col-span-8 bg-white p-6 md:p-8 rounded-[32px] flex flex-col md:flex-row items-center gap-6 md:gap-10 shadow-sm border border-white">
+            <div className="relative w-32 h-32 md:w-36 md:h-36 shrink-0">
                <svg className="w-full h-full transform -rotate-90">
-                 <circle cx="72" cy="72" r="64" stroke="#F1F5F9" strokeWidth="12" fill="transparent" />
+                 <circle cx="50%" cy="50%" r="45%" stroke="#F1F5F9" strokeWidth="12" fill="transparent" />
                  <motion.circle 
-                    cx="72" cy="72" r="64" stroke="#003399" strokeWidth="12" fill="transparent"
+                    cx="50%" cy="50%" r="45%" stroke="#003399" strokeWidth="12" fill="transparent"
                     strokeDasharray="402.12" 
                     initial={{ strokeDashoffset: 402.12 }}
                     animate={{ strokeDashoffset: 402.12 * (1 - 0.85) }}
@@ -146,16 +191,16 @@ const TrustBridgeDashboard = () => {
                  />
                </svg>
                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                 <span className="text-3xl font-black text-slate-800">85%</span>
+                 <span className="text-2xl md:text-3xl font-black text-slate-800">85%</span>
                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">2 Months</span>
                </div>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 text-center md:text-left">
               <h2 className="text-2xl font-bold text-slate-800 mb-2">Overall Trust Score</h2>
-              <p className="text-slate-500 text-sm leading-relaxed max-w-md">
+              <p className="text-slate-500 text-sm leading-relaxed max-w-md mx-auto md:mx-0">
                 Your business trust rating has improved by <span className="text-emerald-500 font-bold">4 points</span> since last month. High verification rates are positively impacting your score.
               </p>
-              <div className="flex gap-4 mt-6">
+              <div className="flex flex-col sm:flex-row gap-4 mt-6 justify-center md:justify-start">
                 <button 
                   onClick={() => navigate('/trust-report')}
                   className="bg-[#003399] text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-800 transition-all shadow-lg shadow-blue-200"
@@ -167,8 +212,8 @@ const TrustBridgeDashboard = () => {
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="col-span-4 bg-[#003399] p-8 rounded-[32px] text-white flex flex-col justify-between shadow-xl shadow-blue-900/10">
-            <div>
+          <motion.div variants={itemVariants} className="lg:col-span-4 bg-[#003399] p-6 md:p-8 rounded-[32px] text-white flex flex-col justify-between shadow-xl shadow-blue-900/10">
+            <div className="mb-6 lg:mb-0">
               <h3 className="text-xl font-bold mb-2">Quick Actions</h3>
               <p className="text-blue-200 text-sm leading-snug">Instantly log new transactions or manage pending notifications.</p>
             </div>
@@ -183,9 +228,9 @@ const TrustBridgeDashboard = () => {
         </div>
 
         {/* Priority Alert Box */}
-        <motion.div variants={itemVariants} className="bg-[#EBF2FF] border border-[#D0E0FF] p-5 rounded-2xl flex items-center justify-between mb-10">
+        <motion.div variants={itemVariants} className="bg-[#EBF2FF] border border-[#D0E0FF] p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-10 text-center sm:text-left">
           <div className="flex items-center gap-4">
-            <div className="bg-white p-2.5 rounded-xl shadow-sm text-[#003399]">
+            <div className="bg-white p-2.5 rounded-xl shadow-sm text-[#003399] shrink-0">
               <AlertCircle size={22} />
             </div>
             <p className="text-sm font-medium text-slate-600">
@@ -194,30 +239,30 @@ const TrustBridgeDashboard = () => {
           </div>
           <button 
             onClick={() => navigate('/transaction-verification')}
-            className="bg-[#003399] text-white px-6 py-2 rounded-xl text-xs font-black shadow-md hover:bg-blue-800"
+            className="bg-[#003399] text-white px-6 py-2 rounded-xl text-xs font-black shadow-md hover:bg-blue-800 w-full sm:w-auto"
           >
             Review Now
           </button>
         </motion.div>
 
         {/* Stats & Growth Section */}
-        <div className="grid grid-cols-12 gap-8 mb-10">
-          <div className="col-span-9 space-y-8">
-            <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
+          <div className="lg:col-span-9 space-y-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <StatCard label="Total Transactions" value="1,284" change="+12%" up />
               <StatCard label="Verified" value="1,240" change="+8%" up />
               <StatCard label="Disputed" value="12" change="-2%" />
             </div>
 
             {/* Growth Chart */}
-            <motion.div variants={itemVariants} className="bg-white p-8 rounded-[32px] shadow-sm border border-white">
+            <motion.div variants={itemVariants} className="bg-white p-6 md:p-8 rounded-[32px] shadow-sm border border-white">
               <div className="flex justify-between items-center mb-8">
                 <h3 className="text-lg font-bold text-slate-800">Transaction Growth</h3>
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg cursor-pointer">
                   Last 30 Days <ChevronRight className="rotate-90" size={14}/>
                 </div>
               </div>
-              <div className="h-[300px] w-full">
+              <div className="h-[250px] md:h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={transactionData}>
                     <defs>
@@ -251,8 +296,8 @@ const TrustBridgeDashboard = () => {
           </div>
 
           {/* AI Insights Panel */}
-          <motion.div variants={itemVariants} className="col-span-3">
-             <div className="bg-white p-8 rounded-[32px] shadow-sm h-full border border-white">
+          <motion.div variants={itemVariants} className="lg:col-span-3">
+             <div className="bg-white p-6 md:p-8 rounded-[32px] shadow-sm h-full border border-white">
                 <div className="flex items-center gap-2 mb-8">
                   <Zap size={20} className="text-blue-500 fill-blue-500" />
                   <h3 className="font-bold text-slate-800">AI Insights</h3>
@@ -269,7 +314,7 @@ const TrustBridgeDashboard = () => {
 
         {/* --- RECENT TRANSACTION TABLE --- */}
         <motion.div variants={itemVariants} className="bg-white rounded-[32px] shadow-sm border border-white overflow-hidden mb-10">
-          <div className="p-8 flex justify-between items-center border-b border-slate-50">
+          <div className="p-6 md:p-8 flex flex-col sm:flex-row justify-between items-center border-b border-slate-50 gap-4">
             <h3 className="text-lg font-bold text-slate-800">Recent Transaction</h3>
             <div className="flex gap-3">
               <button className="flex items-center gap-2 px-5 py-2 border border-slate-100 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50">
@@ -284,7 +329,7 @@ const TrustBridgeDashboard = () => {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left min-w-[700px]">
               <thead className="bg-[#F8FAFC]">
                 <tr className="text-[10px] uppercase font-black text-slate-400 tracking-widest">
                   <th className="px-8 py-5">Client</th>
@@ -295,30 +340,21 @@ const TrustBridgeDashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                <TableRow 
-                  name="Nexus Labs" amount="₦45,200.00" status="Verified" date="January 24, 2026" color="bg-blue-500" 
-                  onClick={() => navigate('/transaction-receipt')} 
-                />
-                <TableRow 
-                  name="Apex Ventures" amount="₦12,300.00" status="Pending" date="February 12, 2026" color="bg-purple-500" 
-                  onClick={() => navigate('/transaction-receipt')} 
-                />
-                <TableRow 
-                  name="TechSolutions Inc" amount="₦68,500.00" status="Blocked" date="December 21, 2025" color="bg-orange-500" 
-                  onClick={() => navigate('/transaction-receipt')} 
-                />
+                <TableRow name="Nexus Labs" amount="₦45,200.00" status="Verified" date="January 24, 2026" color="bg-blue-500" onAction={() => navigate('/transaction-receipt')} />
+                <TableRow name="Apex Ventures" amount="₦12,300.00" status="Pending" date="February 12, 2026" color="bg-purple-500" onAction={() => navigate('/transaction-receipt')} />
+                <TableRow name="TechSolutions Inc" amount="₦68,500.00" status="Blocked" date="December 21, 2025" color="bg-orange-500" onAction={() => navigate('/transaction-receipt')} />
               </tbody>
             </table>
           </div>
         </motion.div>
 
         {/* Promo Footer */}
-        <motion.div variants={itemVariants} className="bg-[#000F2E] rounded-[32px] p-10 relative overflow-hidden flex justify-between items-center text-white">
+        <motion.div variants={itemVariants} className="bg-[#000F2E] rounded-[32px] p-8 md:p-10 relative overflow-hidden flex flex-col md:flex-row justify-between items-center text-white gap-6 text-center md:text-left">
            <div className="z-10">
               <h4 className="text-2xl font-bold mb-2">Ready for more advanced insights?</h4>
               <p className="text-slate-400 text-sm">Upgrade to Enterprise Pro to unlock detailed analytics and priority support.</p>
            </div>
-           <div className="flex gap-4 z-10">
+           <div className="flex flex-col sm:flex-row gap-4 z-10 w-full md:w-auto">
               <button className="bg-white text-slate-900 px-8 py-3 rounded-2xl font-black text-sm hover:shadow-xl transition-all">Upgrade Plan</button>
               <button className="bg-slate-800/50 backdrop-blur-md px-8 py-3 rounded-2xl font-black text-sm border border-slate-700">Dismiss</button>
            </div>
@@ -333,22 +369,17 @@ const TrustBridgeDashboard = () => {
 
 const NavItem = ({ icon, label, active = false }) => (
   <div className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl cursor-pointer transition-all font-bold text-sm ${active ? 'bg-[#EBF2FF] text-[#003399]' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}>
-    {icon}
-    <span>{label}</span>
+    {icon} <span>{label}</span>
   </div>
 );
 
 const StatCard = ({ label, value, change, up = false }) => (
-  <motion.div whileHover={{ y: -5 }} className="bg-white p-8 rounded-[32px] border border-white shadow-sm">
+  <motion.div whileHover={{ y: -5 }} className="bg-white p-6 md:p-8 rounded-[32px] border border-white shadow-sm flex-1">
     <div className="flex justify-between items-start mb-4">
-      <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
-        <CreditCard size={20} />
-      </div>
-      <div className={`flex items-center gap-1 text-xs font-black ${up ? 'text-emerald-500' : 'text-rose-500'}`}>
-        {change} {up ? <ArrowUpRight size={14}/> : <ArrowDownRight size={14}/>}
-      </div>
+      <div className="p-3 bg-blue-50 rounded-2xl text-blue-600"><CreditCard size={20} /></div>
+      <div className={`flex items-center gap-1 text-xs font-black ${up ? 'text-emerald-500' : 'text-rose-500'}`}>{change} {up ? <ArrowUpRight size={14}/> : <ArrowDownRight size={14}/>}</div>
     </div>
-    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">{label}</p>
+    <p className="text-[10px] font-black text-slate-300 uppercase mb-1">{label}</p>
     <p className="text-3xl font-black text-slate-800">{value}</p>
   </motion.div>
 );
@@ -361,37 +392,25 @@ const InsightCard = ({ type, title, desc }) => {
   };
   return (
     <div className={`p-5 rounded-[24px] border ${styles[type]}`}>
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-[10px] font-black uppercase tracking-tighter">{title}</span>
-        <div className="w-1.5 h-1.5 rounded-full bg-current opacity-40"></div>
-      </div>
-      <p className="text-[11px] font-medium leading-relaxed opacity-90">{desc}</p>
+      <span className="text-[10px] font-black uppercase block mb-1">{title}</span>
+      <p className="text-[11px] font-medium opacity-90">{desc}</p>
     </div>
   );
 };
 
-const TableRow = ({ name, amount, status, date, color, onClick }) => (
+const TableRow = ({ name, amount, status, date, color, onAction }) => (
   <tr className="hover:bg-slate-50 transition-colors group cursor-pointer">
-    <td className="px-8 py-6">
-      <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center text-white text-xs font-black`}>
-          {name.split(' ').map(n => n[0]).join('')}
-        </div>
-        <span className="text-sm font-bold text-slate-700">{name}</span>
-      </div>
+    <td className="px-8 py-6 flex items-center gap-3">
+      <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center text-white text-xs font-black`}>{name[0]}</div>
+      <span className="text-sm font-bold text-slate-700">{name}</span>
     </td>
     <td className="px-8 py-6 text-sm font-black text-slate-800">{amount}</td>
+    <td className="px-8 py-6"><span className="px-4 py-1.5 rounded-full text-[10px] font-black bg-slate-100">{status}</span></td>
     <td className="px-8 py-6">
-      <span className={`px-4 py-1.5 rounded-full text-[10px] font-black ${
-        status === 'Verified' ? 'bg-emerald-100 text-emerald-600' : 
-        status === 'Pending' ? 'bg-orange-100 text-orange-600' : 'bg-rose-100 text-rose-600'
-      }`}>
-        {status}
-      </span>
+      <span className="text-sm font-bold text-slate-400 whitespace-nowrap">{date}</span>
     </td>
-    <td className="px-8 py-6 text-sm font-bold text-slate-400">{date}</td>
-    <td className="px-8 py-6">
-      <button onClick={onClick} className="text-[#003399] font-black text-xs hover:underline">View Details</button>
+    <td className="px-8 py-6 text-right">
+      <button onClick={onAction} className="text-[#003399] font-black text-xs hover:underline transition-all">View Details</button>
     </td>
   </tr>
 );
