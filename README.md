@@ -70,6 +70,7 @@ VITE_SUPABASE_ANON_KEY=your_anon_public_key
 2. **Install dependencies**: `npm install`.
 3. **Start the development server**: `npm run dev`.
 4. **Build for production**: `npm run build`.
+```
 
 ---
 
