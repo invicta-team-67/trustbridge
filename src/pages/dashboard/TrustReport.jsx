@@ -83,6 +83,8 @@ const TrustReport = () => {
             };
           });
 
+          
+
           transactions.forEach(tx => {
             const txMonth = new Date(tx.created_at).getMonth();
             const monthEntry = last6Months.find(m => m.rawDate === txMonth);
@@ -124,6 +126,12 @@ const TrustReport = () => {
     await supabase.auth.signOut();
     navigate('/login');
   };
+
+  const handleShare = () => {
+  const url = window.location.href;
+  navigator.clipboard.writeText(url);
+  alert("Link copied to clipboard! You can now share this report.");
+};
 
   const fallbackActivityData = [
     { month: 'MAY', value: 30 }, { month: 'JUN', value: 35 }, { month: 'JUL', value: 40 },
@@ -188,9 +196,12 @@ const TrustReport = () => {
             </div>
           </div>
           <div className="flex gap-2 md:gap-3">
-            <button className="flex items-center gap-2 px-3 md:px-4 py-2 border border-slate-200 rounded-lg text-[10px] md:text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-tight">
-              <Share2 size={14}/> <span className="hidden sm:inline">Secure Link</span>
-            </button>
+<button 
+  onClick={handleShare} // <--- Add this
+  className="flex items-center gap-2 px-3 md:px-4 py-2 border..."
+>
+  <Share2 size={14}/> <span className="hidden sm:inline">Secure Link</span>
+</button>
             <button className="flex items-center gap-2 px-3 md:px-4 py-2 bg-[#1e40af] rounded-lg text-[10px] md:text-xs font-bold text-white shadow-lg hover:bg-blue-800 transition-all uppercase tracking-tight">
               <Download size={14}/> <span className="hidden sm:inline">Download PDF</span>
             </button>

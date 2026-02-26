@@ -1,20 +1,22 @@
-import React, { useEffect, useState } from 'react'; // Updated useEffect and useState
+import React, { useEffect, useState } from 'react'; 
 import { 
   CheckCircle2, 
-  ArrowLeft, 
   ShieldCheck, 
   Lock as LockIcon,
   FileCheck2,
   ExternalLink
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase'; // 1. CONNECTED: Import Supabase
+import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '../../lib/supabase'; 
 
 const TransactionVerifiedSuccess = () => {
   const navigate = useNavigate();
+  // Add these to get the ID from the URL
+const location = useLocation();
+const queryParams = new URLSearchParams(location.search);
+const transactionId = queryParams.get('id');
 
-  // State to hold dynamic transaction data
   const [verifiedData, setVerifiedData] = useState({
     businessName: 'Loading...',
     amount: '₦0.00',
@@ -22,48 +24,51 @@ const TransactionVerifiedSuccess = () => {
     timestamp: '---'
   });
 
-  // 2. CONNECTED: Auth Guard & Data Retrieval
-  useEffect(() => {
-    const fetchVerifiedDetails = async () => {
-      // Check for session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate('/login');
-        return;
+
+useEffect(() => {
+  const fetchVerifiedDetails = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { navigate('/login'); return; }
+
+// Inside TransactionVerifiedSuccess.jsx
+try {
+  let query = supabase.from('transactions').select('*');
+
+  if (transactionId && transactionId !== 'undefined') {
+    query = query.eq('transaction_id', transactionId);
+  } else {
+    query = query
+      .eq('user_id', session.user.id)
+      // .eq('status', 'Verified') // <-- COMMENT THIS OUT TEMPORARILY
+      .order('created_at', { ascending: false })
+      .limit(1);
+  }
+
+const { data, error } = await query.maybeSingle();
+
+      if (error) throw error;
+      
+      if (data) {
+        setVerifiedData({
+          businessName: data.client_name || 'Business Partner',
+          amount: `₦${parseFloat(data.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`,
+          service: data.service_provided || 'General Service',
+          timestamp: new Date(data.created_at).toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        });
       }
+    } catch (err) {
+      console.error("Error fetching verified details:", err);
+    }
+  };
 
-      try {
-        // Fetch the most recently verified transaction for this user
-        const { data, error } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .eq('status', 'Verified')
-          .order('updated_at', { ascending: false }) // Get the one just updated
-          .limit(1)
-          .single();
-
-        if (data) {
-          setVerifiedData({
-            businessName: data.client_name,
-            amount: `₦${parseFloat(data.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}`,
-            service: data.service_provided,
-            timestamp: new Date(data.updated_at).toLocaleString('en-US', { 
-              month: 'short', 
-              day: 'numeric', 
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })
-          });
-        }
-      } catch (err) {
-        console.error("Error fetching success details:", err);
-      }
-    };
-
-    fetchVerifiedDetails();
-  }, [navigate]);
+  fetchVerifiedDetails();
+}, [transactionId, navigate]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-700 flex flex-col items-center px-4 md:px-6 overflow-x-hidden">

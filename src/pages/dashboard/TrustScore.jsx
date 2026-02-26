@@ -185,8 +185,8 @@ const TrustScore = () => {
                 <option>Last 6 Months</option>
               </select>
             </div>
-            <div className="w-full" style={{ height: 200 }}>
-              <ResponsiveContainer width="100%" height="100%">
+<div className="w-full h-64 min-h-[200px]"> 
+  <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData}>
                   <defs><linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#1e40af" stopOpacity={0.1}/><stop offset="95%" stopColor="#1e40af" stopOpacity={0}/></linearGradient></defs>
                   <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94A3B8', fontWeight: 600}} dy={10} />

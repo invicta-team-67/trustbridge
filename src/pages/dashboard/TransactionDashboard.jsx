@@ -69,9 +69,9 @@ const TransactionDashboard = () => {
               ];
               const randomColor = colors[index % colors.length];
               
-              return {
-                id: tx.id,
-                clientName: tx.client_name,
+return {
+  id: tx.transaction_id, // <--- Matches your Supabase column
+  clientName: tx.client_name,
                 initials: tx.client_name.substring(0, 2).toUpperCase(),
                 initialColor: randomColor,
                 description: tx.service_provided, // Mapping service to description
