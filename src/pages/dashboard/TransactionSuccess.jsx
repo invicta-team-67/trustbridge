@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'; 
-// ... keep other imports
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate, useLocation } from 'react-router-dom'; // Add useLocation
 import { supabase } from '../../lib/supabase'; 
 
@@ -23,43 +23,48 @@ const TransactionSuccess = () => {
   useEffect(() => {
 const fetchSpecificTransaction = async () => {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    navigate('/login');
+  if (!session) { navigate('/login'); return; }
+
+  // SAFETY CHECK: Don't fetch if id is missing or the string "undefined"
+  if (!transactionId || transactionId === 'undefined') {
+    console.warn("No ID found, falling back to latest transaction.");
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (data) setSummaryData(data);
+    setLoading(false);
     return;
   }
 
   try {
-    let query = supabase.from('transactions').select('*');
-
-    if (transactionId) {
-      // Priority: Fetch the specific ID from the URL
-      query = query.eq('id', transactionId);
-    } else {
-      // Fallback: Fetch the user's latest entry if ID is missing from URL
-      query = query
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-    }
-
-    const { data, error } = await query.single();
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('transaction_id', transactionId) // Use transaction_id here
+      .single();
 
     if (error) throw error;
-
-    if (data) {
-      setSummary({
-        clientName: data.client_name || 'Not Specified',
-        amount: `₦${parseFloat(data.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`,
-        service: data.service_provided || 'General Service',
-        refId: `TX-${data.id.substring(0, 8).toUpperCase()}-2026`
-      });
-    }
+    if (data) setSummaryData(data);
   } catch (err) {
     console.error("Error fetching transaction details:", err);
-    setSummary(prev => ({ ...prev, clientName: 'Error Loading', service: 'Check Connection' }));
   } finally {
     setLoading(false);
   }
+};
+
+// Helper to keep code clean
+const setSummaryData = (data) => {
+  setSummary({
+    clientName: data.client_name || 'Not Specified',
+    amount: `₦${parseFloat(data.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`,
+    service: data.service_provided || 'General Service',
+    refId: `TX-${data.transaction_id.substring(0, 8).toUpperCase()}-2026`
+  });
 };
 
     fetchSpecificTransaction();

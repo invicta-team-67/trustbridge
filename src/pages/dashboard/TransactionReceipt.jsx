@@ -16,12 +16,15 @@ import {
   X     
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase'; 
 
 const TransactionReceipt = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+const queryParams = new URLSearchParams(location.search);
+const transactionId = queryParams.get('id');
   
   // State for dynamic receipt data (Initialized with default/loading state)
   const [receiptData, setReceiptData] = useState({
@@ -38,7 +41,7 @@ const TransactionReceipt = () => {
   });
 
   // 2. CONNECTED: Auth Guard & Data Fetching
-  useEffect(() => {
+useEffect(() => {
     const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -47,34 +50,44 @@ const TransactionReceipt = () => {
       }
 
       try {
-        // 1. Fetch the User's Profile (for Service Provider Name)
+        // 1. Fetch the User's Profile
         const { data: profile } = await supabase
           .from('profiles')
           .select('business_name')
           .eq('id', session.user.id)
           .single();
 
-        // 2. Fetch the Most Recent Transaction
-        const { data: transaction, error } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+        // 2. Build the query for the specific transaction
+        let query = supabase.from('transactions').select('*');
+
+        if (transactionId && transactionId !== 'undefined') {
+          // Use transaction_id to match your database schema
+          query = query.eq('transaction_id', transactionId);
+        } else {
+          // Fallback to the latest transaction for this user
+          query = query
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+        }
+
+        const { data: transaction, error } = await query.single();
+
+        if (error) throw error;
 
         if (transaction) {
-          // Calculate Financials
           const amount = parseFloat(transaction.amount) || 0;
-          const vat = amount * 0.075; // 7.5% VAT
+          const vat = amount * 0.075; 
           const subtotal = amount - vat;
 
-          // Update State with Real Data
           setReceiptData({
-            receiptNo: `TB-${transaction.id.substring(0, 8).toUpperCase()}`,
-            issueDate: new Date(transaction.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+            // Use transaction_id for the receipt number and reference
+            receiptNo: `TB-${transaction.transaction_id.substring(0, 8).toUpperCase()}`,
+            issueDate: new Date(transaction.created_at).toLocaleDateString('en-US', { 
+              year: 'numeric', month: 'long', day: 'numeric' 
+            }),
             paymentMethod: 'Direct Transfer',
-            reference: `TRX-${transaction.id.substring(9, 13).toUpperCase()}-OP`,
+            reference: `TRX-${transaction.transaction_id.substring(9, 13).toUpperCase()}-OP`,
             serviceProvider: profile?.business_name || 'Verified Merchant',
             clientName: transaction.client_name,
             serviceDescription: transaction.service_provided,
@@ -89,7 +102,7 @@ const TransactionReceipt = () => {
     };
 
     fetchData();
-  }, [navigate]);
+  }, [navigate, transactionId]); // Add transactionId to dependency array
 
   // 3. CONNECTED: Logout Logic
   const handleLogout = async () => {

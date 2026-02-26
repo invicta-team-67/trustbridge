@@ -99,8 +99,7 @@ const LogNewTransaction = () => {
 
       if (error) throw error;
 
-      // Pass the ID to the success page so it knows exactly which one to fetch
-      navigate(`/transaction-success?id=${insertedData.id}`); 
+navigate(`/transaction-success?id=${insertedData.transaction_id}`);
     } catch (error) {
       alert(`Error: ${error.message}`);
     } finally {

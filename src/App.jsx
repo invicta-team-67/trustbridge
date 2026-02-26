@@ -41,7 +41,7 @@ const App = () => {
         <Route path="/transaction-receipt" element={<TransactionReceipt/>} />
         <Route path="/transaction-success" element={<TransactionSuccess/>} />
         <Route path="/transaction-verification" element={<TransactionVerification/>} />
-        <Route path="/transaction-verified-success" element={<TransactionVerifiedSuccess/>} />
+        <Route path="/verification-success" element={<TransactionVerifiedSuccess />} />
         <Route path="/trust-score" element={<TrustScore/>} />
         <Route path="/trust-report" element={<TrustReport/>} />
       </Routes>

@@ -11,7 +11,7 @@ import {
   Menu // Imported for consistency if needed later
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // Add useLocation
 import { supabase } from '../../lib/supabase'; // 1. CONNECTED: Import Supabase
 
 const TransactionVerification = () => {
@@ -31,77 +31,70 @@ const TransactionVerification = () => {
   });
 
   // 2. CONNECTED: Fetch Data & Session Check
-  useEffect(() => {
-    const fetchTransactionData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate('/login');
-        return;
-      }
+const location = useLocation();
+const queryParams = new URLSearchParams(location.search);
+const urlId = queryParams.get('id'); // Get the ID from ?id=...
 
-      try {
-        // Fetch the most recent transaction for the user to simulate the verification link
-        const { data, error } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+useEffect(() => {
+  const fetchTransactionData = async () => {
+    // Only fetch if we have an ID from the URL
+    if (!urlId) return;
 
-        if (error) throw error;
-
-        if (data) {
-          setTransactionId(data.id);
-          
-          const fileName = data.proof_files_urls 
-            ? 'proof_document.pdf' 
-            : 'No document attached';
-
-          setTransactionDetails({
-            merchantName: data.client_name || 'Unknown Client',
-            service: data.service_provided,
-            amount: `₦${parseFloat(data.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}`,
-            date: new Date(data.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-            proofFile: fileName,
-            fileSize: data.proof_files_urls ? '2.4 MB' : '0 KB' 
-          });
-
-          if (data.status === 'Verified') {
-            setIsVerified(true);
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching verification data:", err);
-      }
-    };
-
-    fetchTransactionData();
-  }, [navigate]);
-
-  // 3. CONNECTED: Verify Logic (Update Supabase)
-  const handleVerify = async () => {
-    if (!transactionId) return;
-    setIsProcessing(true);
-    
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('transactions')
-        .update({ status: 'Verified' })
-        .eq('id', transactionId); 
-      
+        .select('*')
+        .eq('transaction_id', urlId) // Use the ID from the URL link
+        .single();
+
       if (error) throw error;
 
-      setIsVerified(true);
-      setTimeout(() => {
-        navigate('/dashboard'); 
-      }, 1500); 
-    } catch (error) {
-      alert("Verification failed: " + error.message);
-    } finally {
-      setIsProcessing(false);
+      if (data) {
+        setTransactionId(data.transaction_id); // Set the internal state so the button works
+        setTransactionDetails({
+          merchantName: data.client_name || 'Verified Merchant',
+          service: data.service_provided,
+          amount: `₦${parseFloat(data.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}`,
+          date: new Date(data.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+          proofFile: data.proof_files_urls ? 'OPay_Receipt.pdf' : 'No document',
+          fileSize: '2.4 MB'
+        });
+      }
+    } catch (err) {
+      console.error("Verification fetch error:", err);
     }
   };
+
+  fetchTransactionData();
+}, [urlId]);
+
+  // 3. CONNECTED: Verify Logic (Update Supabase)
+// Inside TransactionVerification.jsx
+const handleVerify = async () => {
+  if (!transactionId) return;
+  setIsProcessing(true);
+  
+  try {
+    const { error } = await supabase
+      .from('transactions')
+      .update({ status: 'Verified' })
+      .eq('transaction_id', transactionId); 
+    
+    if (error) throw error;
+
+    setIsVerified(true);
+    
+    // REDIRECT UPDATE: Send the user to the new Success Screen
+    setTimeout(() => {
+      navigate('/verification-success'); // Match this to your App.js route
+    }, 1500); 
+    
+  } catch (error) {
+    alert("Verification failed: " + error.message);
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   // 4. CONNECTED: Disputed Logic (Update Supabase)
   const handleDispute = async () => {
