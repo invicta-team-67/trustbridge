@@ -78,7 +78,7 @@ const handleVerify = async () => {
     const { error } = await supabase
       .from('transactions')
       .update({ status: 'Verified' })
-      .eq('transaction_id', transactionId); 
+      .eq('transaction_id', urlId) // Ensure this is 'transaction_id', not 'id'
     
     if (error) throw error;
 
