@@ -1,29 +1,18 @@
 import React, { useEffect, useState } from 'react'; 
-import { 
-  LayoutDashboard, 
-  ArrowRightLeft, 
-  PlusCircle, 
-  FileText, 
-  ShieldCheck, 
-  Settings, 
-  LogOut, 
-  Bell, 
-  ChevronRight,
-  CheckCircle2,
-  ExternalLink,
-  Home,
-  Menu, 
-  X    
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+// ... keep other imports
+import { Link, useNavigate, useLocation } from 'react-router-dom'; // Add useLocation
 import { supabase } from '../../lib/supabase'; 
 
 const TransactionSuccess = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // Hook to access URL parameters
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   
+  // Get the ID from the URL (?id=...)
+  const queryParams = new URLSearchParams(location.search);
+  const transactionId = queryParams.get('id');
+
   const [summary, setSummary] = useState({
     clientName: 'Loading...',
     amount: '₦0.00',
@@ -32,55 +21,51 @@ const TransactionSuccess = () => {
   });
 
   useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 3;
+const fetchSpecificTransaction = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    navigate('/login');
+    return;
+  }
 
-    const fetchLatestTransaction = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate('/login');
-        return;
-      }
+  try {
+    let query = supabase.from('transactions').select('*');
 
-      try {
-        // Step 1: Small initial delay to allow Database Indexing
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    if (transactionId) {
+      // Priority: Fetch the specific ID from the URL
+      query = query.eq('id', transactionId);
+    } else {
+      // Fallback: Fetch the user's latest entry if ID is missing from URL
+      query = query
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+    }
 
-        // Step 2: Fetch the most recent transaction
-        const { data, error } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+    const { data, error } = await query.single();
 
-        if (error) throw error;
+    if (error) throw error;
 
-        if (data) {
-          setSummary({
-            clientName: data.client_name || 'Not Specified',
-            amount: `₦${parseFloat(data.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`,
-            service: data.service_provided || 'General Service',
-            refId: `TX-${data.id.substring(0, 8).toUpperCase()}-2026`
-          });
-          setLoading(false);
-        } else if (retryCount < maxRetries) {
-          // Step 3: Retry logic if data isn't found immediately
-          retryCount++;
-          setTimeout(fetchLatestTransaction, 1500); 
-        } else {
-          setLoading(false);
-          setSummary(prev => ({ ...prev, clientName: 'Not Found', service: 'Check Ledger' }));
-        }
-      } catch (err) {
-        console.error("Error fetching transaction details:", err);
-        setLoading(false);
-      }
-    };
+    if (data) {
+      setSummary({
+        clientName: data.client_name || 'Not Specified',
+        amount: `₦${parseFloat(data.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`,
+        service: data.service_provided || 'General Service',
+        refId: `TX-${data.id.substring(0, 8).toUpperCase()}-2026`
+      });
+    }
+  } catch (err) {
+    console.error("Error fetching transaction details:", err);
+    setSummary(prev => ({ ...prev, clientName: 'Error Loading', service: 'Check Connection' }));
+  } finally {
+    setLoading(false);
+  }
+};
 
-    fetchLatestTransaction();
-  }, [navigate]);
+    fetchSpecificTransaction();
+  }, [transactionId, navigate]);
+
+  // ... keep the rest of your component (SidebarContent and Return)
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
