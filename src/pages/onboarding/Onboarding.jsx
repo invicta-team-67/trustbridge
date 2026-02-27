@@ -167,11 +167,14 @@ const Onboarding = () => {
       navigate('/certificate');
 
     } catch (err) {
-      console.error(err); // Log for debugging
-      setGlobalError("Failed to save profile. Please check your connection.");
+      console.error("Supabase Error:", err); 
+      // THIS WILL PRINT THE EXACT ERROR ON THE SCREEN FOR YOUR TESTERS
+      setGlobalError(`DB Error: ${err.message || JSON.stringify(err)}`);
     } finally {
+      // THIS STOPS THE LOADING SPINNER
       setIsLoading(false);
     }
+
   };
 
   const progressPercentage = (currentStep / totalSteps) * 100;
