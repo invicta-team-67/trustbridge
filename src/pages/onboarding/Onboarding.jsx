@@ -45,8 +45,7 @@ const Onboarding = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         // We check if a profile already exists or if metadata is available
-        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        
+const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();        
         if (data) {
           setFormData(prev => ({
             ...prev,
@@ -147,7 +146,7 @@ const Onboarding = () => {
       const { error: dbError } = await supabase
         .from('profiles')
         .upsert({
-          id: user.id, // Ensure we link to the Auth ID
+          user_id: user.id, // Updated to match your new database schema
           business_name: formData.businessName,
           registration_number: formData.registrationNumber,
           industry: formData.primaryIndustry || formData.industry, 
