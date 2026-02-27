@@ -39,7 +39,6 @@
       description: ''
     });
 
-<<<<<<< HEAD
     // Pre-fill data if they came from SignUp
     useEffect(() => {
       const fetchProfile = async () => {
@@ -63,30 +62,6 @@
               industry: user.user_metadata.industry || ''
             }));
           }
-=======
-  // Pre-fill data if they came from SignUp
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // We check if a profile already exists or if metadata is available
-const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();        
-        if (data) {
-          setFormData(prev => ({
-            ...prev,
-            businessName: data.business_name || user.user_metadata.business_name || '',
-            businessType: data.business_type || user.user_metadata.business_type || '',
-            industry: data.industry || user.user_metadata.industry || ''
-          }));
-        } else if (user.user_metadata) {
-           // Fallback to metadata if profile row isn't fully ready yet
-           setFormData(prev => ({
-            ...prev,
-            businessName: user.user_metadata.business_name || '',
-            businessType: user.user_metadata.business_type || '',
-            industry: user.user_metadata.industry || ''
-          }));
->>>>>>> 80817d3f4df4c122f274d4aa90987a4998cb1e64
         }
       };
       fetchProfile();
@@ -137,89 +112,10 @@ const { data } = await supabase.from('profiles').select('*').eq('id', user.id).s
       else navigate('/signup'); 
     };
 
-<<<<<<< HEAD
     // --- INPUT HANDLER ---
     const handleInputChange = (e) => {
       const { name, value } = e.target;
       setFormData(prev => ({ ...prev, [name]: value }));
-=======
-    if (currentStep === 3) {
-      if (!formData.primaryIndustry) errors.primaryIndustry = 'Required';
-      if (!formData.businessType) errors.businessType = 'Required';
-      if (!formData.description.trim()) errors.description = 'Brief description required';
-    }
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0; // Returns true if NO errors
-  };
-
-  // --- NAVIGATION ---
-  const nextStep = () => {
-    setGlobalError('');
-    if (validateCurrentStep()) {
-      if (currentStep < totalSteps) setCurrentStep(currentStep + 1);
-    } else {
-      setGlobalError('Please fill out all required fields to continue.');
-    }
-  };
-
-  const prevStep = () => {
-    setGlobalError('');
-    setFieldErrors({}); // Clear errors when going back
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
-    else navigate('/signup'); 
-  };
-
-  // --- INPUT HANDLER ---
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Clear the specific error for this field as soon as they start typing!
-    if (fieldErrors[name]) {
-      setFieldErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
-    setGlobalError('');
-  };
-
-  // --- SUPABASE SUBMIT ---
-  const submitToSupabase = async () => {
-    if (!validateCurrentStep()) {
-      setGlobalError('Please complete all final details before submitting.');
-      return;
-    }
-
-    setIsLoading(true);
-    setGlobalError('');
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user logged in. Please sign in again.");
-
-      // Upsert: Create or Update the profile
-      const { error: dbError } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: user.id, // Updated to match your new database schema
-          business_name: formData.businessName,
-          registration_number: formData.registrationNumber,
-          industry: formData.primaryIndustry || formData.industry, 
-          country: formData.country,
-          email: formData.businessEmail,
-          phone: formData.phoneNumber,
-          address: formData.address,
-          business_type: formData.businessType,
-          description: formData.description,
-          verification_status: 'pending',
-          updated_at: new Date()
-        }); 
-
-      if (dbError) throw dbError;
->>>>>>> 80817d3f4df4c122f274d4aa90987a4998cb1e64
       
       // Clear the specific error for this field as soon as they start typing!
       if (fieldErrors[name]) {
@@ -232,25 +128,12 @@ const { data } = await supabase.from('profiles').select('*').eq('id', user.id).s
       setGlobalError('');
     };
 
-<<<<<<< HEAD
     // --- SUPABASE SUBMIT ---
     const submitToSupabase = async () => {
       if (!validateCurrentStep()) {
         setGlobalError('Please complete all final details before submitting.');
         return;
       }
-=======
-    } catch (err) {
-      console.error("Supabase Error:", err); 
-      // THIS WILL PRINT THE EXACT ERROR ON THE SCREEN FOR YOUR TESTERS
-      setGlobalError(`DB Error: ${err.message || JSON.stringify(err)}`);
-    } finally {
-      // THIS STOPS THE LOADING SPINNER
-      setIsLoading(false);
-    }
-
-  };
->>>>>>> 80817d3f4df4c122f274d4aa90987a4998cb1e64
 
       setIsLoading(true);
       setGlobalError('');
@@ -380,8 +263,4 @@ const { data } = await supabase.from('profiles').select('*').eq('id', user.id).s
     );
   };
 
-<<<<<<< HEAD
   export default Onboarding;
-=======
-export default Onboarding;
->>>>>>> 80817d3f4df4c122f274d4aa90987a4998cb1e64
