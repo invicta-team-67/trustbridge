@@ -1,25 +1,15 @@
-  import React, { useEffect, useState } from 'react'; 
-  import { 
-    LayoutDashboard, CreditCard, PlusSquare, ShieldCheck, 
-    FileText, Settings, LogOut, Bell, Search, AlertCircle, 
-    ArrowUpRight, ArrowDownRight, Zap, Download, ChevronRight,
-    Menu, X 
-  } from 'lucide-react';
-  import { motion, AnimatePresence } from 'framer-motion';
-  import { Link, useNavigate } from 'react-router-dom';
-  import { AreaChart, Area, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-  import { supabase } from '../../lib/supabase'; // <-- CONNECTED TO DB
-  import React, { useEffect, useState } from 'react'; 
-  import { 
-    LayoutDashboard, CreditCard, PlusSquare, ShieldCheck, 
-    FileText, Settings, LogOut, Bell, Search, AlertCircle, 
-    ArrowUpRight, ArrowDownRight, Zap, Download, ChevronRight,
-    Menu, X 
-  } from 'lucide-react';
-  import { motion, AnimatePresence } from 'framer-motion';
-  import { Link, useNavigate } from 'react-router-dom';
-  import { AreaChart, Area, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-  import { supabase } from '../../lib/supabase'; // <-- CONNECTED TO DB
+
+import React, { useEffect, useState } from 'react'; 
+import { 
+  LayoutDashboard, CreditCard, PlusSquare, ShieldCheck, 
+  FileText, Settings, LogOut, Bell, Search, AlertCircle, 
+  ArrowUpRight, ArrowDownRight, Zap, Download, ChevronRight,
+  Menu, X 
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link, useNavigate } from 'react-router-dom';
+import { AreaChart, Area, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { supabase } from '../../lib/supabase';
 
   const transactionData = [
     { day: 'Mon', amount: 320 },
@@ -118,8 +108,6 @@
       show: { y: 0, opacity: 1 }
     };
 
-    // Reusable Sidebar Content
-// Reusable Sidebar Content
   const SidebarContent = () => (
     <>
       <div className="p-8 flex items-center gap-2">
@@ -129,26 +117,24 @@
         <h1 className="text-xl font-bold text-[#001B4D]">TrustBridge</h1>
       </div>
 
-      <nav className="flex-1 px-6 space-y-2">
+<nav className="flex-1 px-6 space-y-2">
         <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
-          <NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" active={window.location.pathname === '/dashboard'} />
+          <NavItem icon={<LayoutDashboard size={20}/>} label="Dashboard" active />
         </Link>
         <Link to="/transaction-dashboard" onClick={() => setIsMobileMenuOpen(false)}>
-          <NavItem icon={<CreditCard size={20}/>} label="Transaction" active={window.location.pathname === '/transaction-dashboard'} />
+          <NavItem icon={<CreditCard size={20}/>} label="Transaction" />
         </Link>
         <Link to="/log-new-transaction" onClick={() => setIsMobileMenuOpen(false)}>
-          <NavItem icon={<PlusSquare size={20}/>} label="Add Transaction" active={window.location.pathname === '/log-new-transaction'} />
+          <NavItem icon={<PlusSquare size={20}/>} label="Add Transaction" />
         </Link>
         <Link to="/trust-score" onClick={() => setIsMobileMenuOpen(false)}>
-          <NavItem icon={<ShieldCheck size={20}/>} label="Trust Score" active={window.location.pathname === '/trust-score'} />
+          <NavItem icon={<ShieldCheck size={20}/>} label="Trust Score" />
         </Link>
         <Link to="/trust-report" onClick={() => setIsMobileMenuOpen(false)}>
-          <NavItem icon={<FileText size={20}/>} label="Report" active={window.location.pathname === '/trust-report'} />
+          <NavItem icon={<FileText size={20}/>} label="Report" />
         </Link>
-        
-        {/* FIXED: Wrapped in Link and set to /settings */}
         <Link to="/settings" onClick={() => setIsMobileMenuOpen(false)}>
-          <NavItem icon={<Settings size={20}/>} label="Settings" active={window.location.pathname === '/settings'} />
+          <NavItem icon={<Settings size={20}/>} label="Settings" />
         </Link>
       </nav>
 
