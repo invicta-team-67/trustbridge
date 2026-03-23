@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const ChevronDownIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
@@ -8,10 +7,17 @@ const ChevronDownIcon = () => (
 );
 
 const StepOne = ({ formData, handleInputChange, fieldErrors = {} }) => {
-  // Common countries list - you can expand this or use a library like 'world-countries' later
-  const countries = [
-    "Nigeria", "Ghana", "Kenya", "South Africa", "Rwanda", "Egypt", 
-    "United Kingdom", "United States", "Canada", "Germany", "France"
+  // African countries only
+  const africanCountries = [
+    "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi", "Cabo Verde", 
+    "Cameroon", "Central African Republic", "Chad", "Comoros", "Congo (Brazzaville)", 
+    "Congo (Kinshasa)", "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea", "Eswatini", 
+    "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", "Guinea-Bissau", "Ivory Coast", 
+    "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", "Malawi", "Mali", "Mauritania", 
+    "Mauritius", "Morocco", "Mozambique", "Namibia", "Niger", "Nigeria", "Rwanda", 
+    "Sao Tome and Principe", "Senegal", "Seychelles", "Sierra Leone", "Somalia", 
+    "South Africa", "South Sudan", "Sudan", "Tanzania", "Togo", "Tunisia", "Uganda", 
+    "Zambia", "Zimbabwe"
   ];
 
   return (
@@ -23,20 +29,7 @@ const StepOne = ({ formData, handleInputChange, fieldErrors = {} }) => {
 
       <form className="flex flex-col gap-6" onSubmit={(e) => e.preventDefault()}>
         
-        {/* Business Name */}
-        <div>
-          <label className={`block text-xs font-bold mb-2 ${fieldErrors.businessName ? 'text-red-500' : 'text-gray-500'}`}>Business Name</label>
-          <input 
-            type="text" 
-            name="businessName"
-            value={formData.businessName}
-            onChange={handleInputChange}
-            placeholder="Enter name" 
-            className={`w-full px-4 py-3.5 bg-white border rounded-lg text-sm outline-none transition-all font-medium ${fieldErrors.businessName ? 'border-red-400 focus:ring-red-400 text-gray-800' : 'border-gray-200 focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db]'}`} 
-          />
-        </div>
-
-        {/* Registration Number */}
+        {/* Registration Number - Now the first field */}
         <div>
           <label className={`block text-xs font-bold mb-2 ${fieldErrors.registrationNumber ? 'text-red-500' : 'text-gray-500'}`}>Registration Number</label>
           <input 
@@ -44,7 +37,7 @@ const StepOne = ({ formData, handleInputChange, fieldErrors = {} }) => {
             name="registrationNumber"
             value={formData.registrationNumber}
             onChange={handleInputChange}
-            placeholder="RC1234567" 
+            placeholder="e.g. RC1234567" 
             className={`w-full px-4 py-3.5 bg-white border rounded-lg text-sm outline-none transition-all font-medium ${fieldErrors.registrationNumber ? 'border-red-400 focus:ring-red-400 text-gray-800' : 'border-gray-200 focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db]'}`} 
           />
         </div>
@@ -65,12 +58,14 @@ const StepOne = ({ formData, handleInputChange, fieldErrors = {} }) => {
                 <option value="finance" className="text-gray-800">Finance</option>
                 <option value="retail" className="text-gray-800">Retail</option>
                 <option value="agriculture" className="text-gray-800">Agriculture</option>
+                <option value="healthcare" className="text-gray-800">Healthcare</option>
+                <option value="logistics" className="text-gray-800">Logistics & Supply Chain</option>
               </select>
               <ChevronDownIcon />
             </div>
           </div>
 
-          {/* Country Dropdown - FIXED: Changed from input to select */}
+          {/* Country Dropdown - African Countries Only */}
           <div className="relative">
             <label className={`block text-xs font-bold mb-2 ${fieldErrors.country ? 'text-red-500' : 'text-gray-500'}`}>Country</label>
             <div className="relative">
@@ -81,7 +76,7 @@ const StepOne = ({ formData, handleInputChange, fieldErrors = {} }) => {
                 className={`w-full pl-4 pr-10 py-3.5 bg-white border rounded-lg text-sm outline-none transition-all appearance-none font-medium cursor-pointer ${fieldErrors.country ? 'border-red-400 text-gray-800 focus:ring-red-400' : (formData.country ? 'border-gray-200 text-gray-800 focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db]' : 'border-gray-200 text-gray-400 focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db]')}`}
               >
                 <option value="" disabled>Select country</option>
-                {countries.map((country) => (
+                {africanCountries.map((country) => (
                   <option key={country} value={country.toLowerCase()} className="text-gray-800">
                     {country}
                   </option>
