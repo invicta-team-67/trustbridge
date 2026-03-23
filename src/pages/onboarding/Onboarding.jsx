@@ -40,33 +40,40 @@
     });
 
     // Pre-fill data if they came from SignUp
-    useEffect(() => {
-      const fetchProfile = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
+useEffect(() => {
+    const fetchProfile = async () => {
+      // 1. Get the user
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
         if (user) {
           // We check if a profile already exists or if metadata is available
   const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();        
-          if (data) {
-            setFormData(prev => ({
-              ...prev,
-              businessName: data.business_name || user.user_metadata.business_name || '',
-              businessType: data.business_type || user.user_metadata.business_type || '',
-              industry: data.industry || user.user_metadata.industry || ''
-            }));
-          } else if (user.user_metadata) {
-            // Fallback to metadata if profile row isn't fully ready yet
-            setFormData(prev => ({
-              ...prev,
-              businessName: user.user_metadata.business_name || '',
-              businessType: user.user_metadata.business_type || '',
-              industry: user.user_metadata.industry || ''
-            }));
-          }
-        }
-      };
-      fetchProfile();
-    }, []);
+      
+      if (data) {
+        setFormData(prev => ({
+          ...prev,
+          businessName: data.business_name || user.user_metadata?.business_name || '',
+          businessType: data.business_type || user.user_metadata?.business_type || '',
+          industry: data.industry || user.user_metadata?.industry || ''
+        }));
+      } else if (user.user_metadata) {
+        setFormData(prev => ({
+          ...prev,
+          businessName: user.user_metadata.business_name || '',
+          businessType: user.user_metadata.business_type || '',
+          industry: user.user_metadata.industry || ''
+        }));
+      }
+    };
 
+    fetchProfile();
+  }, [navigate]); // Added 'navigate' to the dependency array
+    
+if (!user || error) {
+        console.warn("No active session found. Redirecting to signup...");
+        navigate('/signup'); // Change to '/login' if you prefer
+        return; // Stop running the rest of the code
+      }
     // --- VALIDATION ENGINE ---
     const validateCurrentStep = () => {
       const errors = {};
