@@ -78,13 +78,11 @@ if (!user || error) {
     const validateCurrentStep = () => {
       const errors = {};
       
-      if (currentStep === 1) {
-        if (!formData.businessName.trim()) errors.businessName = 'Required';
+   if (currentStep === 1) {
         if (!formData.registrationNumber.trim()) errors.registrationNumber = 'Required';
         if (!formData.industry) errors.industry = 'Required';
         if (!formData.country.trim()) errors.country = 'Required';
       }
-      
       if (currentStep === 2) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!formData.businessEmail.trim() || !emailRegex.test(formData.businessEmail)) errors.businessEmail = 'Valid email required';
