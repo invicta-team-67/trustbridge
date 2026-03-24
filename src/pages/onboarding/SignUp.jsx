@@ -115,8 +115,7 @@ const SignUp = () => {
     });
     setServerError('');
   };
-
-  const handleSignUpSubmit = async (e) => {
+const handleSignUpSubmit = async (e) => {
     e.preventDefault();
     setServerError('');
     setIsSuccess(false);
@@ -142,6 +141,7 @@ const SignUp = () => {
     setIsLoading(true);
 
     try {
+      // Step A: Attempt Sign Up
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email,
         password: password,
@@ -156,19 +156,38 @@ const SignUp = () => {
 
       if (signUpError) {
         setServerError(signUpError.message);
-      } else {
-        setIsSuccess(true);
-        setTimeout(() => {
-          navigate('/onboarding');
-        }, 1500); 
+        setIsLoading(false);
+        return;
       }
+
+      // Step B: Explicitly check for an active session
+      // This forces the code to wait until the session is fully established in the browser
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (!session || sessionError) {
+        // If there's no session, it means "Confirm Email" is likely turned ON in Supabase
+        setServerError('Account created! Please check your email to confirm your account before continuing.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Step C: If we have a valid session, navigate!
+      setIsSuccess(true);
+      setTimeout(() => {
+        navigate('/onboarding');
+      }, 1000); 
+
     } catch (err) {
+      console.error("Signup Catch Error:", err);
       setServerError('An unexpected error occurred. Please try again.');
     } finally {
-      setIsLoading(false);
+      // Note: We only set loading to false here if we AREN'T navigating away
+      if (!isSuccess) {
+         setIsLoading(false);
+      }
     }
   };
-
+  
   return (
     <div className="min-h-screen w-full flex bg-white font-sans text-[#0f172a]">
       
