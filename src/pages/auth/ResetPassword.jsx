@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, Link } from 'react-router-dom';
 import Logo from '../../components/logo';
 import { supabase } from '../../lib/supabase'; // <-- CONNECTED TO DB
 
 // --- INLINE ICONS ---
+const LockIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+  </svg>
+);
+
 const EyeIcon = ({ show, onClick }) => (
-  <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 hover:text-[#1a56db] transition-colors cursor-pointer absolute right-4 top-1/2 -translate-y-1/2">
+  <svg onClick={onClick} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 hover:text-[#1a56db] transition-colors cursor-pointer">
     {show ? (
       <>
         <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
@@ -37,7 +44,7 @@ const EmptyCircleIcon = () => (
 );
 
 const InfoIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 shrink-0">
     <circle cx="12" cy="12" r="10"/>
     <path d="M12 16v-4"/>
     <path d="M12 8h.01"/>
@@ -99,7 +106,6 @@ const ResetPassword = () => {
         setError(updateError.message);
       } else {
         // Redirect to login after successful reset
-        // You can change this to '/reset-success' if you have that page
         setIsSuccess(true);
         setTimeout(() => {
             navigate('/login');
@@ -113,65 +119,74 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-[#f5f8fc] font-sans text-[#0f172a]">
+    <div className="min-h-screen w-full flex flex-col bg-[#f8fafc] font-sans text-slate-900">
       
       {/* Top Navigation Bar */}
-      <header className="bg-white px-8 py-4 flex items-center shadow-sm w-full">
-        <div className="flex items-center gap-2">
+      <header className="bg-white px-6 md:px-10 py-5 flex items-center shadow-sm w-full sticky top-0 z-50">
+        <Link to="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
           <Logo />
-          <span className="text-[#0f172a] font-extrabold text-xl tracking-tight">TrustBridge</span>
-        </div>
+          <span className="font-bold text-xl md:text-2xl text-slate-900 tracking-tight">TrustBridge</span>
+        </Link>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col items-center justify-center p-4">
+      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
         
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white w-full max-w-[420px] rounded-2xl p-8 sm:p-10 shadow-sm border border-gray-100 flex flex-col items-center"
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="bg-white w-full max-w-[440px] rounded-[24px] md:rounded-[32px] p-8 sm:p-10 shadow-2xl shadow-blue-900/5 border border-slate-100 flex flex-col items-center"
         >
           
           {/* Header Texts */}
-          <div className="w-full text-left mb-6">
-            <h2 className="text-2xl font-bold mb-2 tracking-tight">Set New Password</h2>
-            <p className="text-gray-500 text-xs font-medium leading-relaxed">
+          <div className="w-full text-center md:text-left mb-8">
+            <h2 className="text-2xl md:text-3xl font-black mb-3 tracking-tight text-slate-900">Set New Password</h2>
+            <p className="text-slate-500 text-sm font-medium leading-relaxed">
               Please enter your new password below to secure your account.
             </p>
           </div>
 
-          {/* Error Banner */}
-          {error && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="w-full flex items-center gap-2 bg-white border border-red-300 text-gray-700 px-4 py-3 rounded-lg mb-6 text-sm shadow-sm text-left"
-            >
-              <InfoIcon />
-              <span className="font-medium text-red-600 text-[11px] leading-tight">{error}</span>
-            </motion.div>
-          )}
+          {/* Animated Error Banner */}
+          <AnimatePresence>
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, scale: 0.95, height: 0 }}
+                className="w-full flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3.5 rounded-xl mb-8 shadow-sm text-left overflow-hidden"
+              >
+                <InfoIcon />
+                <span className="font-bold text-xs leading-snug mt-0.5">{error}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Success Banner */}
-          {isSuccess && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="w-full flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-6 text-sm shadow-sm text-left"
-            >
-              <div className="text-green-600"><CheckCircleIcon /></div>
-              <span className="font-bold text-xs">Password reset successfully! Redirecting to login...</span>
-            </motion.div>
-          )}
+          {/* Animated Success Banner */}
+          <AnimatePresence>
+            {isSuccess && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, height: 0 }}
+                animate={{ opacity: 1, scale: 1, height: 'auto' }}
+                exit={{ opacity: 0, scale: 0.95, height: 0 }}
+                className="w-full flex items-start gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3.5 rounded-xl mb-8 shadow-sm text-left overflow-hidden"
+              >
+                <div className="mt-0.5 text-emerald-600"><CheckCircleIcon /></div>
+                <span className="font-bold text-xs leading-relaxed">Password reset successfully! Redirecting to login...</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Form */}
-          <form onSubmit={handleResetSubmit} className="w-full flex flex-col gap-5">
+          <form onSubmit={handleResetSubmit} className="w-full flex flex-col gap-6">
             
             {/* New Password Input */}
             <div>
-              <label className="block text-xs font-bold text-gray-600 mb-2">New Password</label>
+              <label className="block text-xs font-black uppercase tracking-widest mb-2 text-slate-400">New Password</label>
               <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <LockIcon />
+                </div>
                 <input 
                   type={showNewPassword ? "text" : "password"} 
                   value={password}
@@ -180,52 +195,57 @@ const ResetPassword = () => {
                     setError('');
                   }}
                   placeholder="••••••••••••"
-                  className={`w-full pl-4 pr-11 py-3 bg-white border rounded-lg text-sm outline-none transition-all font-medium tracking-widest text-gray-800 focus:ring-1 focus:ring-[#1a56db] ${
-                    error ? 'border-red-400 focus:border-red-400' : 'border-gray-200 focus:border-[#1a56db]'
+                  className={`w-full pl-12 pr-12 py-3.5 bg-[#f8fafc] border rounded-xl text-sm outline-none transition-all font-bold tracking-widest text-slate-800 placeholder:tracking-normal placeholder-slate-400 ${
+                    error ? 'border-red-400 focus:ring-2 focus:ring-red-400/20 bg-red-50/50' : 'border-slate-200 focus:border-[#1a56db] focus:ring-2 focus:ring-blue-500/20 hover:bg-white'
                   }`}
                 />
-                <EyeIcon show={showNewPassword} onClick={() => setShowNewPassword(!showNewPassword)} />
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                  <EyeIcon show={showNewPassword} onClick={() => setShowNewPassword(!showNewPassword)} />
+                </div>
               </div>
             </div>
 
             {/* Password Strength Section (DYNAMIC) */}
             <div className="w-full my-1">
-              <div className="flex justify-between items-center mb-1.5 text-xs">
-                <span className="text-gray-500 font-medium">Password Strength</span>
-                <span className={`font-bold tracking-wide transition-colors ${strengthScore === 4 ? 'text-green-500' : strengthScore === 3 ? 'text-yellow-500' : 'text-gray-400'}`}>
+              <div className="flex justify-between items-center mb-2 text-xs">
+                <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Password Strength</span>
+                <span className={`font-black tracking-wide transition-colors uppercase text-[10px] ${strengthScore === 4 ? 'text-emerald-500' : strengthScore === 3 ? 'text-amber-500' : 'text-slate-400'}`}>
                   {strengthLabel}
                 </span>
               </div>
               
               {/* Dynamic Strength Bar */}
-              <div className="w-full flex gap-1 h-1.5 mb-3">
-                <div className={`flex-1 rounded-full transition-colors duration-300 ${strengthScore >= 1 ? (strengthScore === 4 ? 'bg-green-500' : 'bg-yellow-400') : 'bg-gray-200'}`}></div>
-                <div className={`flex-1 rounded-full transition-colors duration-300 ${strengthScore >= 2 ? (strengthScore === 4 ? 'bg-green-500' : 'bg-yellow-400') : 'bg-gray-200'}`}></div>
-                <div className={`flex-1 rounded-full transition-colors duration-300 ${strengthScore >= 3 ? (strengthScore === 4 ? 'bg-green-500' : 'bg-yellow-400') : 'bg-gray-200'}`}></div>
-                <div className={`flex-1 rounded-full transition-colors duration-300 ${strengthScore >= 4 ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+              <div className="w-full flex gap-1.5 h-1.5 mb-4">
+                <div className={`flex-1 rounded-full transition-colors duration-300 ${strengthScore >= 1 ? (strengthScore === 4 ? 'bg-emerald-500' : 'bg-amber-400') : 'bg-slate-200'}`}></div>
+                <div className={`flex-1 rounded-full transition-colors duration-300 ${strengthScore >= 2 ? (strengthScore === 4 ? 'bg-emerald-500' : 'bg-amber-400') : 'bg-slate-200'}`}></div>
+                <div className={`flex-1 rounded-full transition-colors duration-300 ${strengthScore >= 3 ? (strengthScore === 4 ? 'bg-emerald-500' : 'bg-amber-400') : 'bg-slate-200'}`}></div>
+                <div className={`flex-1 rounded-full transition-colors duration-300 ${strengthScore >= 4 ? 'bg-emerald-500' : 'bg-slate-200'}`}></div>
               </div>
 
               {/* Dynamic Requirements Checklist */}
-              <div className="grid grid-cols-2 gap-y-2.5 gap-x-4 text-[11px] font-medium transition-colors">
-                <div className={`flex items-center gap-1.5 ${hasLength ? 'text-green-500' : 'text-gray-400'}`}>
+              <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[11px] font-bold transition-colors">
+                <div className={`flex items-center gap-1.5 ${hasLength ? 'text-emerald-500' : 'text-slate-400'}`}>
                   {hasLength ? <CheckCircleIcon /> : <EmptyCircleIcon />} 8+ characters
                 </div>
-                <div className={`flex items-center gap-1.5 ${hasUpper ? 'text-green-500' : 'text-gray-400'}`}>
+                <div className={`flex items-center gap-1.5 ${hasUpper ? 'text-emerald-500' : 'text-slate-400'}`}>
                   {hasUpper ? <CheckCircleIcon /> : <EmptyCircleIcon />} One uppercase
                 </div>
-                <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-green-500' : 'text-gray-400'}`}>
+                <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-500' : 'text-slate-400'}`}>
                   {hasNumber ? <CheckCircleIcon /> : <EmptyCircleIcon />} One number
                 </div>
-                <div className={`flex items-center gap-1.5 ${hasSpecial ? 'text-green-500' : 'text-gray-400'}`}>
-                  {hasSpecial ? <CheckCircleIcon /> : <EmptyCircleIcon />} One special char
+                <div className={`flex items-center gap-1.5 ${hasSpecial ? 'text-emerald-500' : 'text-slate-400'}`}>
+                  {hasSpecial ? <CheckCircleIcon /> : <EmptyCircleIcon />} One symbol
                 </div>
               </div>
             </div>
 
             {/* Confirm Password Input */}
             <div>
-              <label className="block text-xs font-bold text-gray-600 mb-2">Confirm Password</label>
+              <label className="block text-xs font-black uppercase tracking-widest mb-2 text-slate-400">Confirm Password</label>
               <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <LockIcon />
+                </div>
                 <input 
                   type={showConfirmPassword ? "text" : "password"} 
                   value={confirmPassword}
@@ -234,11 +254,13 @@ const ResetPassword = () => {
                     setError('');
                   }}
                   placeholder="••••••••••••"
-                  className={`w-full pl-4 pr-11 py-3 bg-white border rounded-lg text-sm outline-none transition-all font-medium tracking-widest text-gray-800 focus:ring-1 focus:ring-[#1a56db] ${
-                    error.includes('match') ? 'border-red-400 focus:border-red-400' : 'border-gray-200 focus:border-[#1a56db]'
+                  className={`w-full pl-12 pr-12 py-3.5 bg-[#f8fafc] border rounded-xl text-sm outline-none transition-all font-bold tracking-widest text-slate-800 placeholder:tracking-normal placeholder-slate-400 ${
+                    error.includes('match') ? 'border-red-400 focus:ring-2 focus:ring-red-400/20 bg-red-50/50' : 'border-slate-200 focus:border-[#1a56db] focus:ring-2 focus:ring-blue-500/20 hover:bg-white'
                   }`}
                 />
-                <EyeIcon show={showConfirmPassword} onClick={() => setShowConfirmPassword(!showConfirmPassword)} />
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                  <EyeIcon show={showConfirmPassword} onClick={() => setShowConfirmPassword(!showConfirmPassword)} />
+                </div>
               </div>
             </div>
 
@@ -248,29 +270,31 @@ const ResetPassword = () => {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={isLoading || isSuccess}
-              className="w-full bg-[#1a56db] flex justify-center items-center gap-2 text-white py-3.5 rounded-lg text-sm font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full bg-[#1a56db] flex justify-center items-center gap-2 text-white py-4 rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-800 transition-all mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isLoading && (
-                <motion.svg animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white opacity-70">
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                </motion.svg>
-              )}
-              {isLoading ? 'Resetting...' : 'Reset Password'}
+              {isLoading ? (
+                <>
+                  <motion.svg animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="opacity-70">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                  </motion.svg>
+                  Resetting...
+                </>
+              ) : 'Reset Password'}
             </motion.button>
 
-            {/* Secondary Text Link */}
+            {/* Secondary Text Link (FIXED ROUTING) */}
             <div className="text-center mt-2">
-              <a href="/login" className="text-sm font-bold text-[#1a56db] hover:underline underline-offset-2">
-                Cancel and return to log in
-              </a>
+              <Link to="/login" className="text-xs font-bold text-slate-400 hover:text-[#1a56db] transition-colors flex items-center justify-center gap-1.5 group">
+                <span className="group-hover:-translate-x-1 transition-transform">&larr;</span> Cancel and return to log in
+              </Link>
             </div>
 
           </form>
         </motion.div>
 
         {/* Footer Help Text */}
-        <p className="mt-8 text-xs font-medium text-gray-500 text-center">
-          Need help? Contact our <a href="#support" className="text-[#1a56db] hover:underline">Support Team</a> or visit the <a href="#help" className="text-[#1a56db] hover:underline">Help Center</a>.
+        <p className="mt-8 text-xs font-medium text-slate-500 text-center">
+          Need help? Contact our <Link to="#" className="text-[#1a56db] font-bold hover:underline">Support Team</Link> or visit the <Link to="#" className="text-[#1a56db] font-bold hover:underline">Help Center</Link>.
         </p>
 
       </main>
