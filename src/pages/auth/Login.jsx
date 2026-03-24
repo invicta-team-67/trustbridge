@@ -1,26 +1,26 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate, Link } from 'react-router-dom'; // Updated Import
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, Link } from 'react-router-dom'; 
 import { supabase } from '../../lib/supabase'; 
 import Logo from '../../components/logo2';
 
 // --- INLINE ICONS ---
 const MailIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
     <rect width="20" height="16" x="2" y="4" rx="2"/>
     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
   </svg>
 );
 
 const LockIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
     <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
   </svg>
 );
 
 const EyeIcon = ({ show }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 hover:text-[#1a56db] transition-colors cursor-pointer">
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 hover:text-[#1a56db] transition-colors cursor-pointer">
     {show ? (
       <>
         <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
@@ -38,7 +38,7 @@ const EyeIcon = ({ show }) => (
 );
 
 const InfoIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 shrink-0">
     <circle cx="12" cy="12" r="10"/>
     <path d="M12 16v-4"/>
     <path d="M12 8h.01"/>
@@ -61,12 +61,6 @@ const AppleIcon = () => (
   </svg>
 );
 
-const LogoIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-    <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/>
-  </svg>
-);
-
 const Login = () => {
   const navigate = useNavigate();
 
@@ -78,6 +72,7 @@ const Login = () => {
   const [passwordError, setPasswordError] = useState('');
   const [generalError, setGeneralError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState(null); // Added for UI polish
 
   const validateForm = () => {
     let isValid = true;
@@ -129,6 +124,7 @@ const Login = () => {
   };
 
   const handleSocialLogin = async (provider) => {
+    setSocialLoading(provider);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
@@ -136,76 +132,84 @@ const Login = () => {
       if (error) throw error;
     } catch (err) {
       setGeneralError(`Could not authenticate with ${provider}.`);
+      setSocialLoading(null);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-white font-sans text-[#0f172a]">
+    <div className="min-h-screen w-full flex bg-white font-sans text-slate-900">
       
-      {/* Left Column: Branding (Hidden on smaller screens) */}
-      <div className="hidden lg:flex w-1/2 relative overflow-hidden flex-col justify-between p-12 xl:p-20 h-screen sticky top-0">
+      {/* Left Column: Branding */}
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden flex-col justify-between p-12 xl:p-16 h-screen sticky top-0">
         <img 
           src="/auth-images/img-container.png" 
           alt="Abstract blue background" 
           className="absolute inset-0 w-full h-full object-cover z-0"
         />
 
+        {/* Polished Logo Placement */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="relative z-10 flex items-center gap-3 drop-shadow-sm cursor-pointer"
+          onClick={() => navigate('/')}
+        >
+          <Logo />
+          <span className="font-bold text-2xl text-white tracking-tight">TrustBridge</span>
+        </motion.div>
+
+        {/* Centered Hero Text */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="relative z-10 mt-16"
+          transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
+          className="relative z-10 mb-auto mt-32"
         >
-          <h1 className="text-5xl xl:text-6xl font-extrabold text-white mb-6 leading-[1.15] tracking-tight drop-shadow-sm">
-            Welcome Back
+          <h1 className="text-5xl xl:text-6xl font-black text-white mb-6 leading-[1.1] tracking-tight drop-shadow-sm">
+            Welcome <br/> Back.
           </h1>
           <p className="text-blue-50 text-lg xl:text-xl font-medium max-w-md leading-relaxed drop-shadow-sm">
-            Log in to access your business trust dashboard.
+            Log in to access your institutional trust dashboard and verify transactions.
           </p>
-        </motion.div>
-
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.8 }}
-          className="relative z-10 flex items-center gap-2 drop-shadow-sm"
-        >
-        <div className="flex items-center gap-2 cursor-pointer">
-          <Logo />
-          <span className="font-bold text-xl text-[#fcfcfc]">TrustBridge</span>
-        </div>
         </motion.div>
       </div>
 
-      <div className="w-full lg:w-1/2 flex flex-col items-center p-6 sm:p-12 xl:p-24 h-screen overflow-y-auto">
+      {/* Right Column: Form */}
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-12 xl:p-24 h-screen overflow-y-auto">
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-full max-w-[400px] my-auto py-8"
+          className="w-full max-w-[420px] my-auto py-8"
         >
-
-          {generalError && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 bg-white border border-red-300 text-gray-700 px-4 py-3 rounded-lg mb-6 text-sm shadow-sm"
-            >
-              <InfoIcon />
-              <span className="font-medium text-red-600">{generalError}</span>
-            </motion.div>
-          )}
-
-          <div className="mb-10 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-3 tracking-tight text-[#0f172a]">Login</h2>
+          <div className="mb-10 text-center md:text-left">
+            <h2 className="text-3xl font-black mb-3 tracking-tight text-slate-900">Login</h2>
+            <p className="text-slate-500 text-sm font-medium">Securely access your merchant dashboard.</p>
           </div>
 
-          <form onSubmit={handleLogin} className="flex flex-col gap-5">
+          {/* Animated Global Error Banner */}
+          <AnimatePresence>
+            {generalError && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-8 shadow-sm"
+              >
+                <InfoIcon />
+                <span className="font-bold text-xs mt-0.5 leading-snug">{generalError}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <form onSubmit={handleLogin} className="flex flex-col gap-6">
             
+            {/* Email Field */}
             <div>
-              <label className="block text-xs font-bold text-[#0f172a] mb-2">Email address</label>
+              <label className={`block text-xs font-black uppercase tracking-widest mb-2 ${identifierError ? 'text-red-500' : 'text-slate-400'}`}>Email Address</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <MailIcon />
                 </div>
                 <input 
@@ -217,24 +221,29 @@ const Login = () => {
                     setGeneralError('');
                   }}
                   placeholder="name@company.com" 
-                  className={`w-full pl-11 pr-4 py-3 bg-white border rounded-lg text-sm outline-none transition-all shadow-sm font-medium ${
-                    identifierError || generalError ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db] placeholder-gray-400'
+                  className={`w-full pl-12 pr-4 py-3.5 bg-[#f8fafc] border rounded-xl text-sm outline-none transition-all font-bold text-slate-800 ${
+                    identifierError || generalError ? 'border-red-400 focus:ring-2 focus:ring-red-400/20 bg-red-50/50' : 'border-slate-200 focus:border-[#1a56db] focus:ring-2 focus:ring-blue-500/20 hover:bg-white placeholder-slate-400'
                   }`}
                 />
               </div>
-              {identifierError && <p className="text-[11px] text-red-500 font-bold mt-1.5 ml-1">{identifierError}</p>}
+              <AnimatePresence>
+                {identifierError && (
+                  <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-[11px] text-red-500 font-bold mt-2 ml-1">{identifierError}</motion.p>
+                )}
+              </AnimatePresence>
             </div>
 
-
+            {/* Password Field */}
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label className="block text-xs font-bold text-[#0f172a]">Password</label>
-                <a href="/forgot" className="text-xs font-bold text-[#1a56db] hover:underline mt-1">
+                <label className={`block text-xs font-black uppercase tracking-widest ${passwordError ? 'text-red-500' : 'text-slate-400'}`}>Password</label>
+                {/* FIXED: Uses React Router Link instead of a tag */}
+                <Link to="/forgot-password" className="text-xs font-bold text-[#1a56db] hover:underline transition-all">
                   Forgot Password?
-                </a>
+                </Link>
               </div>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <LockIcon />
                 </div>
                 <input 
@@ -246,73 +255,74 @@ const Login = () => {
                     setGeneralError('');
                   }}
                   placeholder="••••••••" 
-                  className={`w-full pl-11 pr-11 py-3 bg-white border rounded-lg text-sm outline-none transition-all shadow-sm font-medium tracking-widest ${
-                    passwordError || generalError ? 'border-red-400 focus:ring-1 focus:ring-red-400' : 'border-gray-200 focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db] placeholder-gray-400'
+                  className={`w-full pl-12 pr-12 py-3.5 bg-[#f8fafc] border rounded-xl text-sm outline-none transition-all font-bold tracking-widest text-slate-800 placeholder:tracking-normal ${
+                    passwordError || generalError ? 'border-red-400 focus:ring-2 focus:ring-red-400/20 bg-red-50/50' : 'border-slate-200 focus:border-[#1a56db] focus:ring-2 focus:ring-blue-500/20 hover:bg-white placeholder-slate-400'
                   }`}
                 />
                 <div 
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center cursor-pointer"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center cursor-pointer"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   <EyeIcon show={showPassword} />
                 </div>
               </div>
-              {passwordError && (
-                <motion.p 
-                  initial={{ opacity: 0, x: -10 }} 
-                  animate={{ opacity: 1, x: [-5, 5, -5, 5, 0] }} 
-                  transition={{ duration: 0.4 }}
-                  className="text-[11px] text-red-500 font-bold mt-1.5 ml-1"
-                >
-                  {passwordError}
-                </motion.p>
-              )}
+              <AnimatePresence>
+                {passwordError && (
+                  <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-[11px] text-red-500 font-bold mt-2 ml-1">{passwordError}</motion.p>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Login Button */}
             <motion.button 
               type="submit" 
-              disabled={isLoading}
+              disabled={isLoading || socialLoading !== null}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full bg-[#1a56db] flex justify-center items-center gap-2 text-white py-3.5 rounded-lg font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full bg-[#1a56db] flex justify-center items-center gap-2 text-white py-4 rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-800 transition-all mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isLoading && (
-                <motion.svg animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white opacity-70">
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                </motion.svg>
-              )}
-              {isLoading ? 'Authenticating...' : 'Login to Account'}
+              {isLoading ? (
+                <>
+                  <motion.svg animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="opacity-70">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                  </motion.svg>
+                  Authenticating...
+                </>
+              ) : 'Login to Account'}
             </motion.button>
 
             {/* Divider */}
-            <div className="relative flex items-center justify-center py-4 mt-2">
-              <div className="absolute w-full border-t border-gray-200"></div>
-              <span className="relative bg-white px-4 text-xs font-medium text-gray-400">Or continue with</span>
+            <div className="relative flex items-center justify-center py-6">
+              <div className="absolute w-full border-t border-slate-100"></div>
+              <span className="relative bg-white px-4 text-xs font-black uppercase tracking-widest text-slate-300">Or continue with</span>
             </div>
 
             {/* Social Logins */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button 
                 type="button" 
                 onClick={() => handleSocialLogin('google')}
-                className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-[#0f172a] py-3 rounded-lg font-bold text-sm hover:bg-gray-50 transition-colors shadow-sm"
+                disabled={isLoading || socialLoading !== null}
+                className="flex-1 flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-95 disabled:opacity-50"
               >
-                <GoogleIcon /> Continue with Google
+                {socialLoading === 'google' ? <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></span> : <GoogleIcon />}
+                Google
               </button>
               
               <button 
                 type="button" 
                 onClick={() => handleSocialLogin('apple')}
-                className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-[#0f172a] py-3 rounded-lg font-bold text-sm hover:bg-gray-50 transition-colors shadow-sm"
+                disabled={isLoading || socialLoading !== null}
+                className="flex-1 flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-95 disabled:opacity-50"
               >
-                <AppleIcon /> Continue with Apple
+                {socialLoading === 'apple' ? <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></span> : <AppleIcon />}
+                Apple
               </button>
             </div>
 
             {/* Switch to Sign Up */}
-            <p className="text-center text-sm text-gray-500 font-medium mt-6">
-              Don't have an account? <Link to="/signup" className="text-[#1a56db] font-bold hover:underline">Sign Up</Link>
+            <p className="text-center text-sm text-slate-500 font-medium mt-6">
+              Don't have an account? <Link to="/signup" className="text-[#1a56db] font-bold hover:underline transition-all">Sign Up</Link>
             </p>
 
           </form>
