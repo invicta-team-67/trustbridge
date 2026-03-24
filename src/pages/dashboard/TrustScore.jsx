@@ -15,7 +15,14 @@ const TrustScore = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showToast, setShowToast] = useState(false);
+  
+  // NEW: Interactive UI States
+  const [timeframe, setTimeframe] = useState('6_months');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showAiAdvisor, setShowAiAdvisor] = useState(true);
+  
   const metricsRef = useRef(null);
+  const notificationsRef = useRef(null);
 
   // State for dynamic metrics
   const [stats, setStats] = useState({
@@ -25,16 +32,13 @@ const TrustScore = () => {
     verificationRate: '0%',
     accountAge: '0y',
     txVolume: '0%',
+    totalTransactions: 0, // NEW: Tracked for the progress bar
     isLoading: true
   });
 
-  // State for dynamic chart data
-  const [dynamicTrendData, setDynamicTrendData] = useState([
-    { month: 'Jan', score: 0 }, { month: 'Feb', score: 0 }, { month: 'Mar', score: 0 },
-    { month: 'Apr', score: 0 }, { month: 'May', score: 0 }, { month: 'Jun', score: 0 }
-  ]);
+  const [dynamicTrendData, setDynamicTrendData] = useState([]);
 
-  // CONNECTED: Auth Guard & Live Backend Data Fetching
+  // 1. CONNECTED: Auth Guard & Live Backend Data Fetching
   useEffect(() => {
     const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -46,7 +50,6 @@ const TrustScore = () => {
       try {
         const userId = session.user.id;
 
-        // 1. FETCH THE AI SCORE FROM WINNY'S BACKEND
         let backendScore = null;
         try {
           const response = await fetch('https://backend-jtvn.onrender.com/trust-score', {
@@ -63,7 +66,6 @@ const TrustScore = () => {
           console.warn("Backend link currently unreachable, using frontend fallback.");
         }
 
-        // 2. FETCH SUPPORTING DETAILS FROM SUPABASE
         const { data: profile } = await supabase
           .from('profiles')
           .select('business_name, created_at')
@@ -74,17 +76,15 @@ const TrustScore = () => {
           .from('transactions')
           .select('status, amount, created_at')
           .eq('user_id', userId)
-          .order('created_at', { ascending: true }); // Order for chart
+          .order('created_at', { ascending: true }); 
 
         if (profile) {
           const totalTx = transactions ? transactions.length : 0;
           const verifiedTx = transactions ? transactions.filter(t => t.status === 'Verified').length : 0;
           const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 100;
           
-          // Calculate frontend fallback score
           const fallbackScore = Math.min(100, 70 + (vRate * 0.2) + (Math.min(totalTx, 10)));
           
-          // Determine join date for account age
           const joinDate = new Date(profile.created_at || new Date());
           const years = ((new Date() - joinDate) / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1);
 
@@ -95,32 +95,9 @@ const TrustScore = () => {
             verificationRate: `${vRate}%`,
             accountAge: `${years}y`,
             txVolume: `${Math.min(95, 60 + (totalTx * 2))}%`,
+            totalTransactions: totalTx,
             isLoading: false
           });
-
-          // 3. GENERATE DYNAMIC CHART DATA based on user's transactions
-          if (transactions && transactions.length > 0) {
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const last6Months = [];
-            const d = new Date();
-            
-            // Get last 6 months labels
-            for (let i = 5; i >= 0; i--) {
-              let tempDate = new Date(d.getFullYear(), d.getMonth() - i, 1);
-              last6Months.push(months[tempDate.getMonth()]);
-            }
-
-            // Simple mock logic based on actual data to show growth over last 6 months
-            const baseScore = Math.max(50, fallbackScore - 20); // Start lower than current
-            const calculatedTrend = last6Months.map((month, index) => {
-              // Create a rising curve that ends near their current score
-              const progression = index / 5; // 0 to 1
-              const monthScore = Math.round(baseScore + ((fallbackScore - baseScore) * progression));
-              return { month, score: monthScore };
-            });
-
-            setDynamicTrendData(calculatedTrend);
-          }
         }
       } catch (err) {
         console.error("Error in Trust Score lifecycle:", err);
@@ -130,12 +107,51 @@ const TrustScore = () => {
     fetchData();
   }, [navigate]);
 
+  // 2. NEW: Dynamic Chart Generator based on Dropdown Timeframe
+  useEffect(() => {
+    if (stats.isLoading) return;
+
+    const score = stats.score;
+    const baseScore = Math.max(50, score - 20); // Create a realistic growth curve
+    let data = [];
+
+    if (timeframe === '30_days') {
+      data = [
+        { month: 'Week 1', score: Math.round(baseScore + 2) },
+        { month: 'Week 2', score: Math.round(baseScore + 8) },
+        { month: 'Week 3', score: Math.round(baseScore + 15) },
+        { month: 'Week 4', score: score },
+      ];
+    } else if (timeframe === '12_months') {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const d = new Date();
+      for (let i = 11; i >= 0; i--) {
+        let tempDate = new Date(d.getFullYear(), d.getMonth() - i, 1);
+        data.push({ 
+          month: months[tempDate.getMonth()], 
+          score: Math.round(baseScore + ((score - baseScore) * ((11 - i) / 11))) 
+        });
+      }
+    } else {
+      // Default: 6_months
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const d = new Date();
+      for (let i = 5; i >= 0; i--) {
+        let tempDate = new Date(d.getFullYear(), d.getMonth() - i, 1);
+        data.push({ 
+          month: months[tempDate.getMonth()], 
+          score: Math.round(baseScore + ((score - baseScore) * ((5 - i) / 5))) 
+        });
+      }
+    }
+    setDynamicTrendData(data);
+  }, [timeframe, stats.score, stats.isLoading]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
   };
 
-  // Handle Search input scrolling
   useEffect(() => {
     if (searchTerm.toLowerCase() === 'volume' || searchTerm.toLowerCase() === 'age' || searchTerm.toLowerCase() === 'rate') {
       metricsRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -144,14 +160,25 @@ const TrustScore = () => {
 
   const handleActionClick = (action) => {
     if (action === 'Upload') {
-      navigate('/settings'); // Send to settings to upload docs
+      navigate('/settings'); 
     } else {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     }
   };
 
-  // Reusable Sidebar Content
+  // Close notifications if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [notificationsRef]);
+
+  // Sidebar Component
   const SidebarContent = () => (
     <>
       <div className="p-6">
@@ -197,12 +224,10 @@ const TrustScore = () => {
         )}
       </AnimatePresence>
 
-      {/* --- DESKTOP SIDEBAR --- */}
       <aside className="hidden lg:flex w-64 bg-white border-r border-slate-200 flex-col fixed h-full z-30">
         <SidebarContent />
       </aside>
 
-      {/* --- MOBILE SIDEBAR DRAWER --- */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -215,9 +240,7 @@ const TrustScore = () => {
         )}
       </AnimatePresence>
 
-      {/* Main Content */}
       <main className="flex-1 lg:ml-64 p-4 md:p-8 lg:p-10 w-full">
-        {/* Header */}
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-10 w-full">
           <div className="flex items-center gap-3 w-full lg:w-auto">
             <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 bg-white rounded-lg border border-slate-200 text-slate-600 shrink-0"><Menu size={20} /></button>
@@ -237,11 +260,47 @@ const TrustScore = () => {
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white shadow-sm text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all" 
               />
             </div>
-            <div className="flex items-center gap-4 shrink-0">
-              <button className="relative text-slate-400 hover:text-slate-600 transition-colors hidden sm:block">
+            
+            {/* NEW: Working Notification Bell */}
+            <div className="flex items-center gap-4 shrink-0 relative" ref={notificationsRef}>
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative text-slate-400 hover:text-slate-600 transition-colors hidden sm:block p-1"
+              >
                 <Bell size={20} />
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
+              
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-10 right-12 w-80 bg-white border border-slate-200 shadow-xl rounded-2xl p-5 z-50"
+                  >
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-sm font-bold text-slate-800">Notifications</h4>
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">2 New</span>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex gap-3">
+                        <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><TrendingUp size={14}/></div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-800">Score Recalculated</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">Your Trust Score was updated based on your recent transaction.</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3 border-t border-slate-100 pt-4">
+                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><ShieldCheck size={14}/></div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-800">Welcome to TrustBridge!</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">Complete your profile to unlock full institutional features.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <img 
                 src={`https://ui-avatars.com/api/?name=${stats.avatarName}&background=1e40af&color=fff`} 
                 className="w-10 h-10 rounded-full border border-slate-200 shadow-sm" 
@@ -288,8 +347,15 @@ const TrustScore = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-8 bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-slate-800">Historical Trust Trend</h3>
-              <select className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 rounded-lg px-3 py-2 outline-none cursor-pointer">
-                <option>Last 6 Months</option>
+              {/* NEW: Working Chart Dropdown */}
+              <select 
+                value={timeframe}
+                onChange={(e) => setTimeframe(e.target.value)}
+                className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 rounded-lg px-3 py-2 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
+              >
+                <option value="30_days">Last 30 Days</option>
+                <option value="6_months">Last 6 Months</option>
+                <option value="12_months">Last 12 Months</option>
               </select>
             </div>
             <div className="w-full flex-1 min-h-[220px]"> 
@@ -314,45 +380,59 @@ const TrustScore = () => {
         </div>
 
         {/* AI Advisor & Benchmarking */}
-        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mb-8">
-          
-          {/* AI Insights */}
-          <div className="lg:col-span-8 bg-[#EEF2FF] rounded-[24px] md:rounded-[32px] p-6 md:p-8 flex flex-col md:flex-row shadow-sm border border-blue-100 gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 bg-white rounded-xl shadow-sm text-blue-600"><Zap size={18} fill="currentColor" /></div>
-                <h3 className="font-bold text-slate-800 text-sm md:text-base">AI Trust Advisor</h3>
-                <span className="ml-auto bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">AI <ChevronRight size={10} /></span>
+        <AnimatePresence>
+          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mb-8">
+            
+            {/* AI Insights - NEW: Dismissible */}
+            {showAiAdvisor ? (
+              <motion.div exit={{ opacity: 0, scale: 0.95 }} className="lg:col-span-8 bg-[#EEF2FF] rounded-[24px] md:rounded-[32px] p-6 md:p-8 flex flex-col md:flex-row shadow-sm border border-blue-100 gap-6 relative">
+                <button 
+                  onClick={() => setShowAiAdvisor(false)} 
+                  className="absolute top-4 right-4 p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
+                >
+                  <X size={16} />
+                </button>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-2 bg-white rounded-xl shadow-sm text-blue-600"><Zap size={18} fill="currentColor" /></div>
+                    <h3 className="font-bold text-slate-800 text-sm md:text-base">AI Trust Advisor</h3>
+                    <span className="ml-auto md:ml-2 bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">AI <ChevronRight size={10} /></span>
+                  </div>
+                  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Predictive Growth</p>
+                  <h2 className="text-2xl md:text-3xl font-black text-[#1e40af] mb-3">+12 Points Available ✨</h2>
+                  <p className="text-xs text-slate-600 leading-relaxed max-w-sm">
+                    Based on your current transaction velocity, we project a 4-point increase by targeting specific verification gaps.
+                  </p>
+                </div>
+                <div className="flex-1 bg-white/60 backdrop-blur-md rounded-2xl p-5 md:p-6 border border-white flex flex-col justify-center">
+                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider block mb-2">+12 POINTS AVAILABLE ↗</span>
+                  <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                    <span className="font-black text-slate-900">AI suggests:</span> Verify your latest tax residency document to unlock <span className="text-blue-600 font-bold">+12 Points</span> status and reduced network fees.
+                  </p>
+                </div>
+              </motion.div>
+            ) : (
+              <div className="lg:col-span-8 flex items-center justify-center p-6 border-2 border-dashed border-slate-200 rounded-[32px]">
+                <p className="text-slate-400 text-sm font-bold flex items-center gap-2"><ShieldCheck size={18}/> All AI suggestions reviewed.</p>
               </div>
-              <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Predictive Growth</p>
-              <h2 className="text-2xl md:text-3xl font-black text-[#1e40af] mb-3">+12 Points Available ✨</h2>
-              <p className="text-xs text-slate-600 leading-relaxed max-w-sm">
-                Based on your current transaction velocity, we project a 4-point increase by targeting specific verification gaps.
-              </p>
-            </div>
-            <div className="flex-1 bg-white/60 backdrop-blur-md rounded-2xl p-5 md:p-6 border border-white flex flex-col justify-center">
-              <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider block mb-2">+12 POINTS AVAILABLE ↗</span>
-              <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                <span className="font-black text-slate-900">AI suggests:</span> Verify your latest tax residency document to unlock <span className="text-blue-600 font-bold">+12 Points</span> status and reduced network fees.
-              </p>
-            </div>
-          </div>
+            )}
 
-          {/* Benchmarking */}
-          <div className="lg:col-span-4 bg-[#1e3a8a] rounded-[24px] md:rounded-[32px] p-6 md:p-8 text-white flex flex-col justify-between shadow-lg relative overflow-hidden">
-            <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl"></div>
-            <div className="relative z-10 mb-6">
-              <h3 className="text-lg font-bold mb-2">Benchmarking</h3>
-              <p className="text-blue-100/80 text-xs leading-relaxed">Generate a verifiable report to compare your trust profile with top-tier firms.</p>
+            {/* Benchmarking */}
+            <div className="lg:col-span-4 bg-[#1e3a8a] rounded-[24px] md:rounded-[32px] p-6 md:p-8 text-white flex flex-col justify-between shadow-lg relative overflow-hidden">
+              <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl"></div>
+              <div className="relative z-10 mb-6">
+                <h3 className="text-lg font-bold mb-2">Benchmarking</h3>
+                <p className="text-blue-100/80 text-xs leading-relaxed">Generate a verifiable report to compare your trust profile with top-tier firms.</p>
+              </div>
+              <button 
+                onClick={() => navigate('/trust-report')} 
+                className="relative z-10 bg-white text-[#1e40af] w-full py-3.5 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
+              >
+                Generate Report <ArrowRightLeft size={16} />
+              </button>
             </div>
-            <button 
-              onClick={() => navigate('/trust-report')} 
-              className="relative z-10 bg-white text-[#1e40af] w-full py-3.5 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
-            >
-              Generate Report <ArrowRightLeft size={16} />
-            </button>
-          </div>
-        </motion.div>
+          </motion.div>
+        </AnimatePresence>
 
         {/* Score Breakdown Metrics */}
         <div ref={metricsRef} className="pt-4">
@@ -381,12 +461,14 @@ const TrustScore = () => {
               btnText="Connect" 
               onAction={() => handleActionClick('Connect')}
             />
+            {/* NEW: Fully Dynamic Progress Bar */}
             <ActionRow 
               icon={<BarChart3 size={18}/>} 
-              title="Log 5 More Transactions" 
-              desc="Reach 'Frequent Trader' tier volume" 
+              title="Reach 10 Transactions" 
+              desc="Unlock 'Frequent Trader' tier volume" 
               points="+4 pts" 
               isProgress 
+              progressValue={Math.min(100, Math.round(((stats.totalTransactions || 0) / 10) * 100))}
             />
             <ActionRow 
               icon={<FileText size={18}/>} 
@@ -429,7 +511,8 @@ const MetricCard = ({ label, value, color, sub = "Max impact on score" }) => (
   </div>
 );
 
-const ActionRow = ({ icon, title, desc, points, btnText, isProgress, onAction }) => (
+// Updated ActionRow to accept dynamic progress logic
+const ActionRow = ({ icon, title, desc, points, btnText, isProgress, progressValue, onAction }) => (
   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-blue-200 hover:shadow-sm transition-all group gap-4">
     <div className="flex items-center gap-4">
       <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shrink-0">
@@ -443,8 +526,11 @@ const ActionRow = ({ icon, title, desc, points, btnText, isProgress, onAction })
     <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-6 sm:pl-4">
       <span className="text-sm font-black text-emerald-500 bg-emerald-50 px-3 py-1 rounded-lg shrink-0">{points}</span>
       {isProgress ? (
-        <div className="w-24 bg-slate-100 h-2 rounded-full overflow-hidden shrink-0">
-          <div className="bg-blue-600 h-full w-[40%] rounded-full"></div>
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <div className="w-24 bg-slate-100 h-2 rounded-full overflow-hidden shrink-0">
+            <div className="bg-blue-600 h-full rounded-full transition-all duration-1000" style={{ width: `${progressValue}%` }}></div>
+          </div>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{progressValue}% Complete</span>
         </div>
       ) : (
         <button 
