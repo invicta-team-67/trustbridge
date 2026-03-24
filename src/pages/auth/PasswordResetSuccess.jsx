@@ -1,20 +1,22 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import Logo from '../../components/logo';
 
-// Green Success Icon with the halo effect
+// Upgraded Green Success Icon with Spring Animation
 const SuccessCheckIcon = () => (
-  <div className="relative flex items-center justify-center w-16 h-16">
-    {/* Light green outer halo */}
-    <div className="absolute inset-0 bg-green-100 rounded-full opacity-60"></div>
-    {/* Darker green inner circle with check */}
-    <div className="relative flex items-center justify-center w-10 h-10 bg-green-500 rounded-full text-white shadow-sm">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+  <motion.div 
+    initial={{ scale: 0 }}
+    animate={{ scale: 1 }}
+    transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+    className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-6 shadow-sm ring-4 ring-emerald-50/50"
+  >
+    <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-md">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="20 6 9 17 4 12"></polyline>
       </svg>
     </div>
-  </div>
+  </motion.div>
 );
 
 // --- MAIN COMPONENT ---
@@ -22,49 +24,55 @@ const PasswordResetSuccess = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-[#f5f8fc] font-sans text-[#0f172a]">
+    <div className="min-h-screen w-full flex flex-col bg-[#f8fafc] font-sans text-slate-900">
       
       {/* Top Navigation Bar */}
-      <header className="bg-white px-8 py-4 flex items-center shadow-sm w-full">
-        <div className="flex items-center gap-2">
+      <header className="bg-white px-6 md:px-10 py-5 flex items-center shadow-sm w-full sticky top-0 z-50">
+        <Link to="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
           <Logo />
-          <span className="text-[#0f172a] font-extrabold text-xl tracking-tight">TrustBridge</span>
-        </div>
+          <span className="font-bold text-xl md:text-2xl text-slate-900 tracking-tight">TrustBridge</span>
+        </Link>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex items-center justify-center p-4">
+      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
         
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="bg-white w-full max-w-[400px] rounded-2xl p-8 sm:p-10 shadow-sm border border-gray-100 flex flex-col items-center text-center"
+          className="bg-white w-full max-w-[440px] rounded-[24px] md:rounded-[32px] p-8 sm:p-10 shadow-2xl shadow-blue-900/5 border border-slate-100 flex flex-col items-center text-center"
         >
           
-          {/* Success Icon */}
+          {/* Animated Success Icon */}
           <SuccessCheckIcon />
 
           {/* Texts */}
-          <h2 className="text-xl sm:text-2xl font-bold mt-6 mb-3 tracking-tight text-[#0f172a]">
+          <h2 className="text-2xl md:text-3xl font-black mb-3 tracking-tight text-slate-900">
             Password Reset Successful
           </h2>
-          <p className="text-gray-500 text-[13px] font-medium leading-relaxed px-2 mb-8">
-            Your password has been updated. You can now log in to your account with your new credentials.
+          <p className="text-slate-500 text-sm font-medium leading-relaxed px-2 mb-8">
+            Your password has been securely updated. You can now log in to your account with your new credentials.
           </p>
 
           {/* Action Button */}
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/login', { replace: true })} // <-- THE MAGIC FIX
+            onClick={() => navigate('/login', { replace: true })} // <-- CORE ROUTING PRESERVED
             type="button"
-            className="w-full bg-[#1a56db] text-white py-3.5 rounded-lg text-sm font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors"
+            className="w-full bg-[#1a56db] flex justify-center items-center gap-2 text-white py-4 rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-800 transition-all"
           >
-            Back to login
+            Back to Log In <span className="text-lg leading-none ml-1">&rarr;</span>
           </motion.button>
 
         </motion.div>
+        
+        {/* Footer Help Text */}
+        <p className="mt-8 text-xs font-medium text-slate-500 text-center">
+          Need help? Contact our <Link to="#" className="text-[#1a56db] font-bold hover:underline">Support Team</Link>.
+        </p>
+
       </main>
     </div>
   );
