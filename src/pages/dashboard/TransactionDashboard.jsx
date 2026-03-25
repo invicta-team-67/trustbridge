@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, 
   ArrowRightLeft, 
@@ -14,7 +14,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu, 
-  X     
+  X,
+  Download,
+  Loader2,
+  Inbox,
+  TrendingUp,
+  ArrowRight
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -22,11 +27,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const TransactionDashboard = () => {
   const navigate = useNavigate();
+  const notificationsRef = useRef(null);
+  
   const [activeTab, setActiveTab] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
-  const [searchTerm, setSearchTerm] = useState(''); // NEW: Added search state
+  const [searchTerm, setSearchTerm] = useState(''); 
   const itemsPerPage = 7; 
+
+  // Interactive UI States
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
   // State for Transactions
   const [transactions, setTransactions] = useState([]);
@@ -81,17 +92,34 @@ const TransactionDashboard = () => {
           if (error) throw error;
           
           if (data && data.length > 0) {
-            const mappedData = data.map((tx, index) => ({
-              id: tx.id || tx.transaction_id || `tx-${index}`, 
-              clientName: tx.client_name || 'Unknown Client',
-              initials: (tx.client_name || 'UN').substring(0, 2).toUpperCase(),
-              initialColor: 'bg-blue-50 text-blue-500',
-              description: tx.description || 'No description',
-              rawAmount: Number(tx.amount || 0), // NEW: Kept for dynamic math
-              amount: `₦${Number(tx.amount || 0).toLocaleString()}`,
-              date: new Date(tx.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-              status: tx.status || 'Pending'
-            }));
+            // NEW: Deterministic Colors for Avatars
+            const colorPalette = [
+              'bg-blue-100 text-blue-700', 
+              'bg-emerald-100 text-emerald-700', 
+              'bg-purple-100 text-purple-700', 
+              'bg-orange-100 text-orange-700', 
+              'bg-rose-100 text-rose-700'
+            ];
+
+            const mappedData = data.map((tx, index) => {
+              const clientName = tx.client_name || 'Unknown Client';
+              const initials = clientName.substring(0, 2).toUpperCase();
+              // Assign color based on character code so the same client always gets the same color
+              const charCode = clientName.charCodeAt(0) || 0;
+              const assignedColor = colorPalette[charCode % colorPalette.length];
+
+              return {
+                id: tx.id || tx.transaction_id || `tx-${index}`, 
+                clientName: clientName,
+                initials: initials,
+                initialColor: assignedColor,
+                description: tx.description || 'No description provided',
+                rawAmount: Number(tx.amount || 0), 
+                amount: `₦${Number(tx.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`,
+                date: new Date(tx.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                status: tx.status || 'Pending'
+              };
+            });
             setTransactions(mappedData);
           } else {
             setTransactions(mockTransactions);
@@ -114,32 +142,39 @@ const TransactionDashboard = () => {
     navigate('/login');
   };
 
+  // Close notifications if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, searchTerm]); // Reset page on tab change or search
+  }, [activeTab, searchTerm]); 
 
-  // --- MOCK DATA (Fallback) ---
+  // --- MOCK DATA (Fallback if DB is empty) ---
   const mockTransactions = [
-    { id: 1, clientName: 'Julianne Deaton', initials: 'JD', initialColor: 'bg-blue-50 text-blue-500', description: 'Quarterly Asset Management Fee', rawAmount: 4800000, amount: '₦4,800,000.00', date: '14 Feb, 2026', status: 'Verified' },
-    { id: 2, clientName: 'Marcus Kholi', initials: 'MK', initialColor: 'bg-orange-50 text-orange-500', description: 'Escrow Holding Release - Prop A', rawAmount: 8800000, amount: '₦8,800,000.00', date: '14 Feb, 2026', status: 'Pending' },
-    { id: 3, clientName: 'Sovereign Tech Ltd', initials: 'ST', initialColor: 'bg-purple-100 text-purple-500', description: 'Treasury Note Purchase', rawAmount: 1900000, amount: '₦1,900,000.00', date: '15 Feb, 2026', status: 'Awaiting' },
-    { id: 4, clientName: 'Supreme Tech Ltd', initials: 'ST', initialColor: 'bg-purple-100 text-purple-500', description: 'Treasury Note Purchase', rawAmount: 1900000, amount: '₦1,900,000.00', date: '15 Feb, 2026', status: 'Awaiting' },
-    { id: 5, clientName: 'Blue-Tree Holdings', initials: 'BT', initialColor: 'bg-red-100 text-red-500', description: 'Wire Transfer Rejection Fee', rawAmount: 3800000, amount: '₦3,800,000.00', date: '16 Feb, 2026', status: 'Disputed' },
-    { id: 6, clientName: 'Aramide Adeyemi', initials: 'AA', initialColor: 'bg-green-50 text-green-500', description: 'Corporate Bond Interest Payout', rawAmount: 11800000, amount: '₦11,800,000.00', date: '16 Feb, 2026', status: 'Verified' },
-    { id: 7, clientName: 'Adeyemi Araoye', initials: 'AA', initialColor: 'bg-green-50 text-green-500', description: 'Corporate Bond Interest Payout', rawAmount: 11800000, amount: '₦11,800,000.00', date: '16 Feb, 2026', status: 'Verified' },
+    { id: 1, clientName: 'Julianne Deaton', initials: 'JD', initialColor: 'bg-emerald-100 text-emerald-700', description: 'Quarterly Asset Management Fee', rawAmount: 4800000, amount: '₦4,800,000.00', date: '14 Feb 2026', status: 'Verified' },
+    { id: 2, clientName: 'Marcus Kholi', initials: 'MK', initialColor: 'bg-orange-100 text-orange-700', description: 'Escrow Holding Release - Prop A', rawAmount: 8800000, amount: '₦8,800,000.00', date: '14 Feb 2026', status: 'Pending' },
+    { id: 3, clientName: 'Sovereign Tech Ltd', initials: 'ST', initialColor: 'bg-blue-100 text-blue-700', description: 'Treasury Note Purchase', rawAmount: 1900000, amount: '₦1,900,000.00', date: '15 Feb 2026', status: 'Awaiting' },
   ];
 
   const getStatusStyles = (status) => {
     switch (status) {
-      case 'Verified': return 'bg-[#ecfdf5] text-[#10b981]';
-      case 'Pending': return 'bg-[#fffbeb] text-[#f59e0b]';
-      case 'Awaiting': return 'bg-[#eff6ff] text-[#3b82f6]';
-      case 'Disputed': return 'bg-[#fef2f2] text-[#ef4444]';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'Verified': return 'bg-emerald-50 border-emerald-100 text-emerald-600';
+      case 'Pending': return 'bg-amber-50 border-amber-100 text-amber-600';
+      case 'Awaiting': return 'bg-blue-50 border-blue-100 text-blue-600';
+      case 'Disputed': return 'bg-rose-50 border-rose-100 text-rose-600';
+      default: return 'bg-slate-100 border-slate-200 text-slate-600';
     }
   };
 
-  // NEW: Filtering logic that includes the Search Bar
+  // Dynamic Filtering Logic
   const filteredTransactions = transactions.filter(tx => {
     const matchesTab = activeTab === 'All' || tx.status === activeTab;
     const matchesSearch = tx.clientName.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -150,14 +185,33 @@ const TransactionDashboard = () => {
   const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / itemsPerPage));
   const currentItems = filteredTransactions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // NEW: Dynamic Calculations for Summary Cards
+  // Dynamic Calculations for Summary Cards
   const verifiedTotal = transactions.filter(t => t.status === 'Verified').reduce((acc, curr) => acc + (curr.rawAmount || 0), 0);
-  const pendingTotal = transactions.filter(t => t.status === 'Pending').reduce((acc, curr) => acc + (curr.rawAmount || 0), 0);
-  const pendingCount = transactions.filter(t => t.status === 'Pending').length;
+  const pendingTotal = transactions.filter(t => t.status === 'Pending' || t.status === 'Awaiting').reduce((acc, curr) => acc + (curr.rawAmount || 0), 0);
+  const pendingCount = transactions.filter(t => t.status === 'Pending' || t.status === 'Awaiting').length;
   const disputedCount = transactions.filter(t => t.status === 'Disputed').length;
   const verificationRate = transactions.length > 0 
     ? ((transactions.filter(t => t.status === 'Verified').length / transactions.length) * 100).toFixed(1) 
     : 0;
+
+  // NEW: Working Export CSV Function
+  const handleExportCSV = () => {
+    if (!filteredTransactions || filteredTransactions.length === 0) {
+      alert("No transactions available to export based on current filters.");
+      return;
+    }
+    const headers = ['Transaction ID', 'Client Name', 'Description', 'Amount (NGN)', 'Date', 'Status'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredTransactions.map(t => `"${t.id}","${t.clientName}","${t.description}","${t.rawAmount}","${t.date}","${t.status}"`)
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `TrustBridge_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
 
   // Reusable Sidebar Content
   const SidebarContent = () => (
@@ -195,7 +249,7 @@ const TransactionDashboard = () => {
       <div className="mt-auto p-6 border-t border-slate-100">
         <button 
           onClick={handleLogout} 
-          className="flex items-center gap-3 text-slate-400 hover:text-slate-600 font-medium transition-colors w-full text-left"
+          className="flex items-center gap-3 text-slate-400 hover:text-rose-500 font-medium transition-colors w-full text-left"
         >
           <LogOut size={18} /> <span>Log out</span>
         </button>
@@ -206,12 +260,24 @@ const TransactionDashboard = () => {
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] font-sans text-slate-700 relative overflow-x-hidden">
       
-      {/* --- DESKTOP SIDEBAR --- */}
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20, x: '-50%' }} 
+            animate={{ opacity: 1, y: 0, x: '-50%' }} 
+            exit={{ opacity: 0, y: -20, x: '-50%' }}
+            className="fixed top-6 left-1/2 z-50 bg-slate-800 text-white px-6 py-3 rounded-full shadow-lg text-sm font-bold"
+          >
+            Advanced filters coming soon!
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <aside className="hidden lg:flex w-64 bg-white border-r border-slate-200 flex-col fixed h-full z-30">
         <SidebarContent />
       </aside>
 
-      {/* --- MOBILE SIDEBAR DRAWER --- */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -236,7 +302,6 @@ const TransactionDashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* --- MAIN CONTENT --- */}
       <main className="flex-1 lg:ml-64 min-h-screen flex flex-col w-full">
         {/* Header */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 sticky top-0 z-20">
@@ -249,31 +314,59 @@ const TransactionDashboard = () => {
             </button>
             
             <div className="relative w-full md:w-96 hidden sm:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              {/* NEW: Bound search input to state */}
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 type="text" 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search transactions..." 
-                className="w-full pl-10 pr-4 py-2 bg-[#f1f5f9] border-none rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
+                placeholder="Search clients, transactions, or ID..." 
+                className="w-full pl-10 pr-4 py-2.5 bg-[#f8fafc] border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all shadow-sm"
               />
             </div>
           </div>
 
           <div className="hidden sm:flex items-center gap-4 pl-5 border-l border-slate-200">
-            {/* NEW: Added Notification Bell */}
-            <button className="text-slate-400 hover:text-slate-600 relative">
-              <Bell size={18} />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            {/* Interactive Notification Bell */}
+            <div className="relative" ref={notificationsRef}>
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="text-slate-400 hover:text-slate-600 transition-colors relative p-1"
+              >
+                <Bell size={20} />
+                <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+              </button>
+
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-10 right-0 w-80 bg-white border border-slate-200 shadow-xl rounded-2xl p-5 z-50"
+                  >
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-sm font-bold text-slate-800">Notifications</h4>
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">New</span>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex gap-3">
+                        <div className="w-8 h-8 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0"><ShieldCheck size={14}/></div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-800">Transaction Disputed</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">A client has raised an issue with a recent ledger entry.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            
             <div className="text-right ml-2">
               <p className="text-sm font-bold text-slate-800 leading-none">{userData.name}</p>
               <p className="text-[11px] text-slate-400 font-medium capitalize mt-1">{userData.role}</p>
             </div>
             <img 
               src={`https://ui-avatars.com/api/?name=${userData.avatarName}&background=1e40af&color=fff`} 
-              className="w-9 h-9 rounded-full border border-slate-200" 
+              className="w-10 h-10 rounded-full border border-slate-200 shadow-sm" 
               alt="profile" 
             />
           </div>
@@ -283,26 +376,34 @@ const TransactionDashboard = () => {
         <div className="p-4 md:p-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Transactions</h1>
-              <p className="text-sm text-slate-500">Manage and track institutional flow of funds</p>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Ledger Operations</h1>
+              <p className="text-sm text-slate-500 font-medium mt-1">Manage and track your institutional flow of funds</p>
             </div>
-            <button 
-              onClick={() => navigate('/log-new-transaction')}
-              className="w-full md:w-auto bg-[#1e40af] text-white px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-blue-900/10 hover:bg-blue-800 transition-all"
-            >
-              <Plus size={18} /> Log New Transaction
-            </button>
+            <div className="flex w-full md:w-auto gap-3">
+              <button 
+                onClick={handleExportCSV}
+                className="flex-1 md:flex-none bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all active:scale-95"
+              >
+                <Download size={16} /> <span className="hidden sm:inline">Export</span>
+              </button>
+              <button 
+                onClick={() => navigate('/log-new-transaction')}
+                className="flex-1 md:flex-none bg-[#1e40af] text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-blue-900/10 hover:bg-blue-800 transition-all active:scale-95"
+              >
+                <Plus size={18} /> New Entry
+              </button>
+            </div>
           </div>
 
           {/* Filters */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <div className="flex overflow-x-auto w-full md:w-auto pb-2 md:pb-0 bg-white border border-slate-200 p-1 rounded-lg gap-1 scrollbar-hide">
+            <div className="flex overflow-x-auto w-full md:w-auto pb-2 md:pb-0 bg-white border border-slate-200 p-1.5 rounded-xl gap-1 scrollbar-hide shadow-sm">
               {['All', 'Verified', 'Pending', 'Awaiting', 'Disputed'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`whitespace-nowrap px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    activeTab === tab ? 'bg-[#1e40af] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'
+                  className={`whitespace-nowrap px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                    activeTab === tab ? 'bg-[#1e40af] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                   }`}
                 >
                   {tab}
@@ -310,62 +411,80 @@ const TransactionDashboard = () => {
               ))}
             </div>
             <button 
-              onClick={() => setSearchTerm('')} // Simple clear filter action
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors w-full md:w-auto justify-center md:justify-start"
+              onClick={() => {
+                if(searchTerm) setSearchTerm('');
+                else {
+                  setShowToast(true);
+                  setTimeout(() => setShowToast(false), 3000);
+                }
+              }}
+              className={`flex items-center gap-2 px-4 py-2.5 border rounded-xl text-sm font-bold transition-colors w-full md:w-auto justify-center md:justify-start ${searchTerm ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'}`}
             >
-              <Filter size={16} /> {searchTerm ? 'Clear Search' : 'More Filters'}
+              {searchTerm ? <X size={16} /> : <Filter size={16} />} 
+              {searchTerm ? 'Clear Search' : 'More Filters'}
             </button>
           </div>
 
           {/* Table Card */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-8">
+          <div className="bg-white border border-slate-200 rounded-[24px] shadow-sm overflow-hidden mb-8">
             <div className="overflow-x-auto">
               <table className="w-full text-left min-w-[900px]">
                 <thead className="bg-[#f8fafc] border-b border-slate-100">
-                  <tr className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
-                    <th className="px-6 py-4">Client Name</th>
-                    <th className="px-6 py-4">Description</th>
-                    <th className="px-6 py-4">Amount (NGN)</th>
-                    <th className="px-6 py-4">Date</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-orange-500">Action</th>
+                  <tr className="text-[11px] uppercase font-black text-slate-400 tracking-widest">
+                    <th className="px-6 py-5">Client Profile</th>
+                    <th className="px-6 py-5">Description</th>
+                    <th className="px-6 py-5">Amount (NGN)</th>
+                    <th className="px-6 py-5">Date</th>
+                    <th className="px-6 py-5">Status</th>
+                    <th className="px-6 py-5 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {isLoading ? (
                     <tr>
-                      <td colSpan="6" className="px-6 py-8 text-center text-sm text-slate-400">Loading transactions...</td>
+                      <td colSpan="6" className="px-6 py-16 text-center">
+                        <Loader2 className="animate-spin text-blue-600 mx-auto mb-4" size={32} />
+                        <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Syncing Ledger Data...</p>
+                      </td>
                     </tr>
                   ) : currentItems.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="px-6 py-8 text-center text-sm text-slate-400">No transactions found matching your criteria.</td>
+                      <td colSpan="6" className="px-6 py-16 text-center">
+                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400 border border-slate-100 shadow-inner">
+                          <Inbox size={28} />
+                        </div>
+                        <p className="text-base font-black text-slate-800 mb-1">No records found</p>
+                        <p className="text-sm text-slate-500 mb-6 font-medium">We couldn't find any transactions matching your current filters.</p>
+                        <button onClick={() => {setSearchTerm(''); setActiveTab('All');}} className="bg-white border border-slate-200 text-slate-700 font-bold px-6 py-2.5 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
+                           Clear Filters
+                        </button>
+                      </td>
                     </tr>
                   ) : (
                     currentItems.map((tx) => (
-                      <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4">
+                      <tr key={tx.id} className="hover:bg-slate-50 transition-colors group">
+                        <td className="px-6 py-5">
                           <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ${tx.initialColor}`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black shadow-sm border border-white ${tx.initialColor}`}>
                               {tx.initials}
                             </div>
-                            <span className="text-[13px] font-bold text-slate-700">{tx.clientName}</span>
+                            <span className="text-[13px] font-bold text-slate-800 group-hover:text-[#1e40af] transition-colors">{tx.clientName}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-[13px] text-slate-500 max-w-[240px] truncate">{tx.description}</td>
-                        <td className="px-6 py-4 text-[13px] font-bold text-slate-800">{tx.amount}</td>
-                        <td className="px-6 py-4 text-[13px] text-slate-500">{tx.date}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${getStatusStyles(tx.status)}`}>
+                        <td className="px-6 py-5 text-[13px] font-medium text-slate-500 max-w-[240px] truncate">{tx.description}</td>
+                        <td className="px-6 py-5 text-[14px] font-black text-slate-800 tracking-tight">{tx.amount}</td>
+                        <td className="px-6 py-5 text-[12px] font-bold text-slate-400">{tx.date}</td>
+                        <td className="px-6 py-5">
+                          <span className={`px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest ${getStatusStyles(tx.status)}`}>
                             {tx.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
-                          {/* NEW: Securely passes the transaction data to the receipt page */}
+                        <td className="px-6 py-5 text-right">
                           <button 
                             onClick={() => navigate('/transaction-receipt', { state: { transactionData: tx } })}
-                            className="text-orange-500 font-bold text-[11px] hover:underline text-left leading-tight"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 font-bold text-[11px] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm active:scale-95"
                           >
-                            View<br/>Details
+                            View <ArrowRight size={12} />
                           </button>
                         </td>
                       </tr>
@@ -377,14 +496,14 @@ const TransactionDashboard = () => {
 
             {/* Pagination */}
             {filteredTransactions.length > 0 && (
-              <div className="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p className="text-[12px] text-slate-400 font-medium text-center sm:text-left">
-                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length} transactions
+              <div className="px-6 py-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#f8fafc]">
+                <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest text-center sm:text-left">
+                  Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length} entries
                 </p>
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-30 transition-opacity"
+                    className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-30 transition-all shadow-sm"
                     disabled={currentPage === 1}
                   >
                     <ChevronLeft size={16} />
@@ -394,8 +513,8 @@ const TransactionDashboard = () => {
                       <button
                         key={i}
                         onClick={() => setCurrentPage(i + 1)}
-                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all shrink-0 ${
-                          currentPage === i + 1 ? 'bg-[#1e40af] text-white shadow-md' : 'hover:bg-slate-50 text-slate-500'
+                        className={`w-9 h-9 rounded-lg text-xs font-black transition-all shrink-0 ${
+                          currentPage === i + 1 ? 'bg-[#1e40af] text-white shadow-md' : 'bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 shadow-sm'
                         }`}
                       >
                         {i + 1}
@@ -404,7 +523,7 @@ const TransactionDashboard = () => {
                   </div>
                   <button 
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-30 transition-opacity"
+                    className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-30 transition-all shadow-sm"
                     disabled={currentPage === totalPages}
                   >
                     <ChevronRight size={16} />
@@ -414,30 +533,30 @@ const TransactionDashboard = () => {
             )}
           </div>
 
-          {/* Bottom Stats Grid - NEW: Fully Dynamic based on actual table data */}
+          {/* Bottom Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <SummaryCard 
               label="Verified Total" 
-              value={`₦${(verifiedTotal / 1000000).toFixed(1)}M`} 
-              sub={<span className="text-emerald-500 font-bold">Total approved volume</span>} 
+              value={`₦${(verifiedTotal / 1000000).toFixed(2)}M`} 
+              sub={<span className="text-emerald-500 font-bold flex items-center gap-1 mt-1"><TrendingUp size={12} /> Total approved volume</span>} 
             />
             <SummaryCard 
               label="Pending Payouts" 
-              value={`₦${(pendingTotal / 1000000).toFixed(1)}M`} 
-              sub={`🕓 ${pendingCount} active request${pendingCount !== 1 ? 's' : ''}`} 
+              value={`₦${(pendingTotal / 1000000).toFixed(2)}M`} 
+              sub={<span className="text-amber-500 font-bold block mt-1">🕓 {pendingCount} active request{pendingCount !== 1 ? 's' : ''}</span>} 
             />
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm transition-shadow hover:shadow-md">
-              <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Verification Rate</p>
-              <p className="text-2xl font-bold text-slate-800 mb-4">{verificationRate}%</p>
-              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                <div className="bg-[#1e40af] h-1.5 rounded-full transition-all duration-1000" style={{ width: `${verificationRate}%` }}></div>
+            <div className="bg-white p-6 md:p-8 rounded-[24px] border border-slate-200 shadow-sm transition-all hover:shadow-md hover:border-blue-200 group">
+              <p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest group-hover:text-blue-500 transition-colors">Verification Rate</p>
+              <p className="text-3xl font-black text-slate-800 mb-5 tracking-tight">{verificationRate}%</p>
+              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div className="bg-[#1e40af] h-2 rounded-full transition-all duration-1000" style={{ width: `${verificationRate}%` }}></div>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm transition-shadow hover:shadow-md">
-              <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Disputed Cases</p>
-              <p className="text-2xl font-bold text-rose-500 mb-2">{disputedCount}</p>
-              <p className={`text-[11px] font-bold flex items-center gap-1 ${disputedCount > 0 ? 'text-rose-400' : 'text-slate-400'}`}>
-                {disputedCount > 0 ? '⚠ Requires attention' : '✓ All clear'}
+            <div className="bg-white p-6 md:p-8 rounded-[24px] border border-slate-200 shadow-sm transition-all hover:shadow-md hover:border-rose-200 group">
+              <p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest group-hover:text-rose-500 transition-colors">Disputed Cases</p>
+              <p className="text-3xl font-black text-rose-500 mb-2 tracking-tight">{disputedCount}</p>
+              <p className={`text-[11px] font-bold flex items-center gap-1.5 mt-3 ${disputedCount > 0 ? 'text-rose-500 bg-rose-50 px-2 py-1 rounded-md w-max' : 'text-emerald-500 bg-emerald-50 px-2 py-1 rounded-md w-max'}`}>
+                {disputedCount > 0 ? <><AlertCircle size={12}/> Requires attention</> : <><ShieldCheck size={12}/> All clear</>}
               </p>
             </div>
           </div>
@@ -447,8 +566,10 @@ const TransactionDashboard = () => {
   );
 };
 
+// --- SUB COMPONENTS ---
+
 const NavItem = ({ icon, label, active = false }) => (
-  <button className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-[13px] font-bold transition-all ${
+  <button className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[13px] font-bold transition-all ${
     active ? 'bg-[#eff6ff] text-[#1e40af] shadow-sm' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
   }`}>
     {icon} <span>{label}</span>
@@ -456,12 +577,12 @@ const NavItem = ({ icon, label, active = false }) => (
 );
 
 const SummaryCard = ({ label, value, sub }) => (
-  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between transition-shadow hover:shadow-md">
+  <div className="bg-white p-6 md:p-8 rounded-[24px] border border-slate-200 shadow-sm flex flex-col justify-between transition-all hover:shadow-md hover:border-blue-200 group">
     <div>
-      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">{label}</p>
-      <p className="text-2xl font-bold text-slate-800">{value}</p>
+      <p className="text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest group-hover:text-blue-500 transition-colors">{label}</p>
+      <p className="text-3xl font-black text-slate-800 tracking-tight">{value}</p>
     </div>
-    <p className="text-[11px] text-slate-400 mt-2">{sub}</p>
+    <div className="text-[11px] text-slate-400 mt-2">{sub}</div>
   </div>
 );
 
