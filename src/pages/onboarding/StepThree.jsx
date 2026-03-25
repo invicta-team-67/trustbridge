@@ -1,73 +1,26 @@
 import React from 'react';
 
-const ChevronDownIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-    <path d="m6 9 6 6 6-6"/>
-  </svg>
-);
-
 const StepThree = ({ formData, handleInputChange, fieldErrors = {}, handleSubmit }) => {
   
   const onFormSubmit = (e) => {
     e.preventDefault();
-    handleSubmit(); // Directly triggers the parent's submit function
+    // Only trigger submit if they've checked the confirmation
+    if (formData.confirmCreate) {
+      handleSubmit();
+    }
   };
 
   return (
     <>
       <div className="mb-8">
         <h2 className="text-2xl sm:text-3xl font-bold mb-2 tracking-tight text-[#64748b]">
-          Operational Details
+          Final Step
         </h2>
-        <p className="text-gray-400 text-sm font-medium">Setup almost complete.</p>
+        <p className="text-gray-400 text-sm font-medium">Almost there, let's wrap this up.</p>
       </div>
 
       <form className="flex flex-col gap-6" onSubmit={onFormSubmit}>
         
-        {/* Expected Monthly Volume */}
-        <div>
-          <label className={`block text-xs font-bold mb-2 ${fieldErrors.monthlyVolume ? 'text-red-500' : 'text-gray-500'}`}>
-            Expected Monthly Volume
-          </label>
-          <div className="relative">
-            <select 
-              name="monthlyVolume" 
-              value={formData.monthlyVolume || ""} 
-              onChange={handleInputChange} 
-              className={`w-full pl-4 pr-10 py-3.5 bg-white border rounded-lg text-sm outline-none transition-all appearance-none font-medium cursor-pointer ${
-                fieldErrors.monthlyVolume 
-                  ? 'border-red-400 text-gray-800' 
-                  : 'border-gray-200 text-gray-800 focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db]'
-              }`}
-            >
-              <option value="" disabled>Select expected volume</option>
-              <option value="under_1m">Under ₦1,000,000</option>
-              <option value="1m_10m">₦1,000,000 - ₦10,000,000</option>
-              <option value="10m_50m">₦10,000,000 - ₦50,000,000</option>
-              <option value="over_50m">Over ₦50,000,000</option>
-            </select>
-            <ChevronDownIcon />
-          </div>
-          {fieldErrors.monthlyVolume && (
-            <p className="text-red-500 text-[10px] mt-1 uppercase font-bold">{fieldErrors.monthlyVolume}</p>
-          )}
-        </div>
-
-        {/* Website or Social Link (Optional) */}
-        <div>
-          <label className="block text-xs font-bold mb-2 text-gray-500">
-            Business Website or Social Link (Optional)
-          </label>
-          <input 
-            type="text" 
-            name="websiteUrl" 
-            value={formData.websiteUrl || ""} 
-            onChange={handleInputChange} 
-            placeholder="https://www.example.com" 
-            className="w-full px-4 py-3.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db] font-medium transition-all"
-          />
-        </div>
-
         {/* Brief Description */}
         <div>
           <label className={`block text-xs font-bold mb-2 ${fieldErrors.description ? 'text-red-500' : 'text-gray-500'}`}>
@@ -85,19 +38,56 @@ const StepThree = ({ formData, handleInputChange, fieldErrors = {}, handleSubmit
                 : 'border-gray-200 focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db]'
             }`}
           />
-          {fieldErrors.description && (
-            <p className="text-red-500 text-[10px] mt-1 uppercase font-bold">{fieldErrors.description}</p>
+        </div>
+
+        {/* Website (Optional) */}
+        <div>
+          <label className="block text-xs font-bold mb-2 text-gray-500">
+            Website or Social Link (Optional)
+          </label>
+          <input 
+            type="text" 
+            name="websiteUrl" 
+            value={formData.websiteUrl || ""} 
+            onChange={handleInputChange} 
+            placeholder="https://example.com" 
+            className="w-full px-4 py-3.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-[#1a56db] focus:ring-1 focus:ring-[#1a56db] font-medium transition-all"
+          />
+        </div>
+
+        {/* Confirmation Radio Section */}
+        <div className={`p-4 rounded-xl border transition-all ${formData.confirmCreate === 'yes' ? 'border-blue-200 bg-blue-50' : 'border-gray-100 bg-gray-50/50'}`}>
+          <p className="text-sm font-semibold text-gray-700 mb-3">Complete Setup?</p>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center cursor-pointer group">
+              <input
+                type="radio"
+                name="confirmCreate"
+                value="yes"
+                checked={formData.confirmCreate === 'yes'}
+                onChange={handleInputChange}
+                className="w-4 h-4 text-[#1a56db] border-gray-300 focus:ring-[#1a56db]"
+              />
+              <span className="ml-2 text-sm font-medium text-gray-600 group-hover:text-[#1a56db]">Yes</span>
+            </label>
+          </div>
+          {fieldErrors.confirmCreate && (
+            <p className="text-red-500 text-[10px] mt-2 uppercase font-bold tracking-wider">{fieldErrors.confirmCreate}</p>
           )}
         </div>
 
-        {/* Final Submit Button */}
+        {/* Submit Button */}
         <button 
           type="submit" 
-          className="w-full mt-4 bg-[#1a56db] hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-lg transition-colors active:scale-[0.98]"
+          disabled={formData.confirmCreate !== 'yes'}
+          className={`w-full mt-2 font-bold py-4 px-4 rounded-xl shadow-lg transition-all active:scale-[0.98] ${
+            formData.confirmCreate === 'yes' 
+              ? 'bg-[#1a56db] hover:bg-blue-700 text-white shadow-blue-200' 
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+          }`}
         >
           Complete Setup
         </button>
-
       </form>
     </>
   );
