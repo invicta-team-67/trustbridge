@@ -24,7 +24,7 @@ const TrustScore = () => {
   const metricsRef = useRef(null);
   const notificationsRef = useRef(null);
 
-  // REALITY: Fully Dynamic Data States
+  // Fully Dynamic Data States
   const [notifications, setNotifications] = useState([]);
   const [aiInsight, setAiInsight] = useState({ points: 0, title: 'Loading...', text: '...', action: '...' });
   const [dynamicTrendData, setDynamicTrendData] = useState([]);
@@ -32,7 +32,7 @@ const TrustScore = () => {
     businessName: 'Loading...',
     avatarName: 'User',
     score: 0,
-    verificationRate: 0, // Kept as number for math
+    verificationRate: 0, 
     accountAge: '0y',
     txVolume: '0%',
     totalTransactions: 0, 
@@ -51,22 +51,6 @@ const TrustScore = () => {
       try {
         const userId = session.user.id;
 
-        // Fetch AI Score from Backend
-        let backendScore = null;
-        try {
-          const response = await fetch('https://backend-jtvn.onrender.com/trust-score', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId }) 
-          });
-          if (response.ok) {
-            const apiData = await response.json();
-            backendScore = apiData.score;
-          }
-        } catch (apiErr) {
-          console.warn("Backend link unreachable, using frontend fallback.");
-        }
-
         // Fetch Profile and Transactions
         const { data: profile } = await supabase
           .from('profiles')
@@ -81,12 +65,18 @@ const TrustScore = () => {
           .order('created_at', { ascending: true }); 
 
         if (profile) {
-          // --- Core Stats Math ---
+          // --- FIXED: Core Stats Math ---
+          // It now strictly relies on your live Supabase data so it updates instantly
           const totalTx = transactions ? transactions.length : 0;
           const verifiedTx = transactions ? transactions.filter(t => t.status === 'Verified').length : 0;
-          const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 100;
-          const fallbackScore = Math.min(100, 70 + (vRate * 0.2) + (Math.min(totalTx, 10)));
-          const finalScore = Math.round(backendScore !== null ? backendScore : fallbackScore);
+          
+          // Prevent NaN and false 100% rates
+          const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 0;
+          
+          // Dynamic Score Calculation (Base 50 + Volume + Verification)
+          const volumePoints = Math.min(totalTx * 2, 20); // Up to 20 points for logging transactions
+          const verificationPoints = Math.round((vRate / 100) * 30); // Up to 30 points for verifying them
+          const finalScore = Math.min(100, 50 + volumePoints + verificationPoints);
           
           const joinDate = new Date(profile.created_at || new Date());
           const years = ((new Date() - joinDate) / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1);
@@ -97,12 +87,12 @@ const TrustScore = () => {
             score: finalScore,
             verificationRate: vRate,
             accountAge: `${years}y`,
-            txVolume: `${Math.min(95, 60 + (totalTx * 2))}%`,
+            txVolume: `${Math.min(95, 40 + (totalTx * 5))}%`, // Visually scales with transactions
             totalTransactions: totalTx,
             isLoading: false
           });
 
-          // --- REALITY: Dynamic AI Advisor Logic ---
+          // --- Dynamic AI Advisor Logic ---
           if (totalTx === 0) {
             setAiInsight({
               points: 10,
@@ -135,7 +125,7 @@ const TrustScore = () => {
             });
           }
 
-          // --- REALITY: Dynamic Notifications ---
+          // --- Dynamic Notifications ---
           if (transactions) {
             const alerts = transactions
               .filter(t => t.status === 'Disputed' || t.status === 'Pending')
@@ -160,7 +150,9 @@ const TrustScore = () => {
   // 2. Dynamic Chart Generator
   useEffect(() => {
     if (stats.isLoading) return;
-    const score = stats.score;
+    
+    // Safety check to ensure score is a valid number
+    const score = isNaN(stats.score) ? 50 : stats.score;
     const baseScore = Math.max(40, score - 15); 
     let data = [];
 
@@ -291,7 +283,7 @@ const TrustScore = () => {
               <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search 'volume' or 'age'..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white shadow-sm text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all" />
             </div>
             
-            {/* REALITY: Dynamic Notifications */}
+            {/* Notifications */}
             <div className="flex items-center gap-4 shrink-0 relative" ref={notificationsRef}>
               <button onClick={() => setShowNotifications(!showNotifications)} className="relative text-slate-400 hover:text-slate-600 transition-colors p-1">
                 <Bell size={20} />
@@ -382,7 +374,7 @@ const TrustScore = () => {
           </motion.div>
         </div>
 
-        {/* REALITY: Dynamic AI Advisor */}
+        {/* AI Advisor */}
         <AnimatePresence>
           <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mb-8">
             {showAiAdvisor ? (
