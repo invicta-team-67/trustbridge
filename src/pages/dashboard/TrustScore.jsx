@@ -3,7 +3,7 @@ import {
   LayoutDashboard, ArrowRightLeft, PlusCircle, ShieldCheck, 
   FileText, Settings, LogOut, Search, Bell, TrendingUp, 
   Zap, ChevronRight, Link as LinkIcon, BarChart3,
-  Menu, X
+  Menu, X, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
@@ -16,7 +16,7 @@ const TrustScore = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showToast, setShowToast] = useState(false);
   
-  // NEW: Interactive UI States
+  // Interactive UI States
   const [timeframe, setTimeframe] = useState('6_months');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAiAdvisor, setShowAiAdvisor] = useState(true);
@@ -24,21 +24,22 @@ const TrustScore = () => {
   const metricsRef = useRef(null);
   const notificationsRef = useRef(null);
 
-  // State for dynamic metrics
+  // REALITY: Fully Dynamic Data States
+  const [notifications, setNotifications] = useState([]);
+  const [aiInsight, setAiInsight] = useState({ points: 0, title: 'Loading...', text: '...', action: '...' });
+  const [dynamicTrendData, setDynamicTrendData] = useState([]);
   const [stats, setStats] = useState({
     businessName: 'Loading...',
     avatarName: 'User',
     score: 0,
-    verificationRate: '0%',
+    verificationRate: 0, // Kept as number for math
     accountAge: '0y',
     txVolume: '0%',
-    totalTransactions: 0, // NEW: Tracked for the progress bar
+    totalTransactions: 0, 
     isLoading: true
   });
 
-  const [dynamicTrendData, setDynamicTrendData] = useState([]);
-
-  // 1. CONNECTED: Auth Guard & Live Backend Data Fetching
+  // 1. CONNECTED: Master Data Fetching & AI Logic
   useEffect(() => {
     const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -50,6 +51,7 @@ const TrustScore = () => {
       try {
         const userId = session.user.id;
 
+        // Fetch AI Score from Backend
         let backendScore = null;
         try {
           const response = await fetch('https://backend-jtvn.onrender.com/trust-score', {
@@ -57,15 +59,15 @@ const TrustScore = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId }) 
           });
-          
           if (response.ok) {
             const apiData = await response.json();
             backendScore = apiData.score;
           }
         } catch (apiErr) {
-          console.warn("Backend link currently unreachable, using frontend fallback.");
+          console.warn("Backend link unreachable, using frontend fallback.");
         }
 
+        // Fetch Profile and Transactions
         const { data: profile } = await supabase
           .from('profiles')
           .select('business_name, created_at')
@@ -74,16 +76,17 @@ const TrustScore = () => {
 
         const { data: transactions } = await supabase
           .from('transactions')
-          .select('status, amount, created_at')
+          .select('id, status, amount, created_at, client_name')
           .eq('user_id', userId)
           .order('created_at', { ascending: true }); 
 
         if (profile) {
+          // --- Core Stats Math ---
           const totalTx = transactions ? transactions.length : 0;
           const verifiedTx = transactions ? transactions.filter(t => t.status === 'Verified').length : 0;
           const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 100;
-          
           const fallbackScore = Math.min(100, 70 + (vRate * 0.2) + (Math.min(totalTx, 10)));
+          const finalScore = Math.round(backendScore !== null ? backendScore : fallbackScore);
           
           const joinDate = new Date(profile.created_at || new Date());
           const years = ((new Date() - joinDate) / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1);
@@ -91,13 +94,60 @@ const TrustScore = () => {
           setStats({
             businessName: profile.business_name || 'Your Business',
             avatarName: (profile.business_name || 'User').split(' ').join('+'),
-            score: Math.round(backendScore !== null ? backendScore : fallbackScore),
-            verificationRate: `${vRate}%`,
+            score: finalScore,
+            verificationRate: vRate,
             accountAge: `${years}y`,
             txVolume: `${Math.min(95, 60 + (totalTx * 2))}%`,
             totalTransactions: totalTx,
             isLoading: false
           });
+
+          // --- REALITY: Dynamic AI Advisor Logic ---
+          if (totalTx === 0) {
+            setAiInsight({
+              points: 10,
+              title: "Log Your First Transaction",
+              text: "You haven't recorded any activity yet. Start building your Trust Score by logging your first transaction.",
+              action: "Log a transaction to unlock your initial Trust Score baseline."
+            });
+          } else if (vRate < 80) {
+            const lostPoints = Math.max(2, Math.round((100 - vRate) * 0.15));
+            setAiInsight({
+              points: lostPoints,
+              title: "Improve Verification Rate",
+              text: `Your verification rate is currently at ${vRate}%. Follow up with clients to verify pending transactions.`,
+              action: `Verify pending transactions to recover ${lostPoints} Points and improve your tier.`
+            });
+          } else if (totalTx < 10) {
+            const needed = 10 - totalTx;
+            setAiInsight({
+              points: needed * 2,
+              title: "Increase Transaction Volume",
+              text: `You need ${needed} more verified transaction(s) to reach the 'Frequent Trader' milestone.`,
+              action: `Log more transactions to unlock +${needed * 2} Points status and reduced network fees.`
+            });
+          } else {
+            setAiInsight({
+              points: 12,
+              title: "Upload Tax Documentation",
+              text: "Your transaction metrics are excellent. Take the final step by verifying your institutional identity.",
+              action: "Verify your latest tax residency document to unlock +12 Points status and premium features."
+            });
+          }
+
+          // --- REALITY: Dynamic Notifications ---
+          if (transactions) {
+            const alerts = transactions
+              .filter(t => t.status === 'Disputed' || t.status === 'Pending')
+              .reverse()
+              .slice(0, 3)
+              .map(t => ({
+                id: t.id,
+                type: t.status,
+                client: t.client_name || 'a client',
+              }));
+            setNotifications(alerts);
+          }
         }
       } catch (err) {
         console.error("Error in Trust Score lifecycle:", err);
@@ -107,19 +157,18 @@ const TrustScore = () => {
     fetchData();
   }, [navigate]);
 
-  // 2. NEW: Dynamic Chart Generator based on Dropdown Timeframe
+  // 2. Dynamic Chart Generator
   useEffect(() => {
     if (stats.isLoading) return;
-
     const score = stats.score;
-    const baseScore = Math.max(50, score - 20); // Create a realistic growth curve
+    const baseScore = Math.max(40, score - 15); 
     let data = [];
 
     if (timeframe === '30_days') {
       data = [
         { month: 'Week 1', score: Math.round(baseScore + 2) },
-        { month: 'Week 2', score: Math.round(baseScore + 8) },
-        { month: 'Week 3', score: Math.round(baseScore + 15) },
+        { month: 'Week 2', score: Math.round(baseScore + 6) },
+        { month: 'Week 3', score: Math.round(baseScore + 10) },
         { month: 'Week 4', score: score },
       ];
     } else if (timeframe === '12_months') {
@@ -127,21 +176,14 @@ const TrustScore = () => {
       const d = new Date();
       for (let i = 11; i >= 0; i--) {
         let tempDate = new Date(d.getFullYear(), d.getMonth() - i, 1);
-        data.push({ 
-          month: months[tempDate.getMonth()], 
-          score: Math.round(baseScore + ((score - baseScore) * ((11 - i) / 11))) 
-        });
+        data.push({ month: months[tempDate.getMonth()], score: Math.round(baseScore + ((score - baseScore) * ((11 - i) / 11))) });
       }
     } else {
-      // Default: 6_months
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const d = new Date();
       for (let i = 5; i >= 0; i--) {
         let tempDate = new Date(d.getFullYear(), d.getMonth() - i, 1);
-        data.push({ 
-          month: months[tempDate.getMonth()], 
-          score: Math.round(baseScore + ((score - baseScore) * ((5 - i) / 5))) 
-        });
+        data.push({ month: months[tempDate.getMonth()], score: Math.round(baseScore + ((score - baseScore) * ((5 - i) / 5))) });
       }
     }
     setDynamicTrendData(data);
@@ -153,21 +195,19 @@ const TrustScore = () => {
   };
 
   useEffect(() => {
-    if (searchTerm.toLowerCase() === 'volume' || searchTerm.toLowerCase() === 'age' || searchTerm.toLowerCase() === 'rate') {
+    if (['volume', 'age', 'rate'].includes(searchTerm.toLowerCase())) {
       metricsRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [searchTerm]);
 
   const handleActionClick = (action) => {
-    if (action === 'Upload') {
-      navigate('/settings'); 
-    } else {
+    if (action === 'Upload') navigate('/settings'); 
+    else {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     }
   };
 
-  // Close notifications if clicked outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
@@ -178,7 +218,9 @@ const TrustScore = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [notificationsRef]);
 
-  // Sidebar Component
+  // Dynamic Percentile Math
+  const percentile = Math.max(1, Math.round(100 - stats.score + (stats.totalTransactions * 0.5)));
+
   const SidebarContent = () => (
     <>
       <div className="p-6">
@@ -200,7 +242,7 @@ const TrustScore = () => {
         </nav>
       </div>
       <div className="mt-auto p-6 border-t border-slate-100">
-        <button onClick={handleLogout} className="flex items-center gap-3 text-slate-400 hover:text-slate-600 font-medium transition-colors w-full text-left">
+        <button onClick={handleLogout} className="flex items-center gap-3 text-slate-400 hover:text-rose-500 font-medium transition-colors w-full text-left">
           <LogOut size={18} /> <span>Log out</span>
         </button>
       </div>
@@ -210,16 +252,10 @@ const TrustScore = () => {
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] font-sans text-slate-700 relative overflow-x-hidden">
       
-      {/* Toast Notification */}
       <AnimatePresence>
         {showToast && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20, x: '-50%' }} 
-            animate={{ opacity: 1, y: 0, x: '-50%' }} 
-            exit={{ opacity: 0, y: -20, x: '-50%' }}
-            className="fixed top-6 left-1/2 z-50 bg-slate-800 text-white px-6 py-3 rounded-full shadow-lg text-sm font-bold"
-          >
-            LinkedIn integration coming soon!
+          <motion.div initial={{ opacity: 0, y: -20, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: -20, x: '-50%' }} className="fixed top-6 left-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-full shadow-lg text-sm font-bold">
+            OAuth integration coming soon!
           </motion.div>
         )}
       </AnimatePresence>
@@ -250,69 +286,53 @@ const TrustScore = () => {
             </div>
           </div>
           <div className="flex items-center justify-between w-full lg:w-auto gap-4 lg:pl-6 lg:border-l border-slate-200">
-            <div className="relative flex-1 lg:w-64 max-w-sm">
+            <div className="relative flex-1 lg:w-64 max-w-sm hidden sm:block">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input 
-                type="text" 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search 'volume' or 'age'..." 
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white shadow-sm text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all" 
-              />
+              <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search 'volume' or 'age'..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white shadow-sm text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all" />
             </div>
             
-            {/* NEW: Working Notification Bell */}
+            {/* REALITY: Dynamic Notifications */}
             <div className="flex items-center gap-4 shrink-0 relative" ref={notificationsRef}>
-              <button 
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative text-slate-400 hover:text-slate-600 transition-colors hidden sm:block p-1"
-              >
+              <button onClick={() => setShowNotifications(!showNotifications)} className="relative text-slate-400 hover:text-slate-600 transition-colors p-1">
                 <Bell size={20} />
-                <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                {notifications.length > 0 && <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 border-2 border-[#f8fafc] rounded-full"></span>}
               </button>
               
               <AnimatePresence>
                 {showNotifications && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                    className="absolute top-10 right-12 w-80 bg-white border border-slate-200 shadow-xl rounded-2xl p-5 z-50"
-                  >
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute top-10 right-12 md:right-0 w-80 bg-white border border-slate-200 shadow-xl rounded-2xl p-5 z-50">
                     <div className="flex justify-between items-center mb-4">
                       <h4 className="text-sm font-bold text-slate-800">Notifications</h4>
-                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">2 New</span>
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{notifications.length} Alerts</span>
                     </div>
                     <div className="space-y-4">
-                      <div className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><TrendingUp size={14}/></div>
-                        <div>
-                          <p className="text-xs font-bold text-slate-800">Score Recalculated</p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">Your Trust Score was updated based on your recent transaction.</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-3 border-t border-slate-100 pt-4">
-                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><ShieldCheck size={14}/></div>
-                        <div>
-                          <p className="text-xs font-bold text-slate-800">Welcome to TrustBridge!</p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">Complete your profile to unlock full institutional features.</p>
-                        </div>
-                      </div>
+                      {notifications.length === 0 ? (
+                        <p className="text-xs text-slate-500 text-center py-2">No pending alerts.</p>
+                      ) : (
+                        notifications.map((notif, i) => (
+                          <div key={i} className={`flex gap-3 ${i > 0 ? 'border-t border-slate-100 pt-4' : ''}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${notif.type === 'Disputed' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                              {notif.type === 'Disputed' ? <AlertCircle size={14}/> : <ShieldCheck size={14}/>}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-800">Transaction {notif.type}</p>
+                              <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">Action needed for transaction with <span className="font-bold">{notif.client}</span>.</p>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              <img 
-                src={`https://ui-avatars.com/api/?name=${stats.avatarName}&background=1e40af&color=fff`} 
-                className="w-10 h-10 rounded-full border border-slate-200 shadow-sm" 
-                alt="profile" 
-              />
+              <img src={`https://ui-avatars.com/api/?name=${stats.avatarName}&background=1e40af&color=fff`} className="w-10 h-10 rounded-full border border-slate-200 shadow-sm" alt="profile" />
             </div>
           </div>
         </header>
 
-        {/* Top Section: Gauge and Trend */}
+        {/* Top Section */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mb-8">
-          {/* Gauge Card */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-4 bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
             {stats.score > 75 && (
               <div className="absolute top-6 right-6 px-3 py-1 bg-emerald-50 text-emerald-500 rounded-full text-[10px] font-black uppercase">+2.4% ↑</div>
@@ -320,15 +340,7 @@ const TrustScore = () => {
             <div className="relative w-40 h-40 md:w-48 md:h-48 mb-6">
               <svg className="w-full h-full transform -rotate-90">
                 <circle cx="50%" cy="50%" r="40%" stroke="#F1F5F9" strokeWidth="12" fill="transparent" />
-                <motion.circle 
-                  cx="50%" cy="50%" r="40%" 
-                  stroke="#1e40af" strokeWidth="12" fill="transparent" 
-                  strokeDasharray="251" 
-                  initial={{ strokeDashoffset: 251 }} 
-                  animate={{ strokeDashoffset: 251 * (1 - (stats.score / 100)) }} 
-                  transition={{ duration: 2, ease: "easeOut" }} 
-                  strokeLinecap="round" 
-                />
+                <motion.circle cx="50%" cy="50%" r="40%" stroke="#1e40af" strokeWidth="12" fill="transparent" strokeDasharray="251" initial={{ strokeDashoffset: 251 }} animate={{ strokeDashoffset: 251 * (1 - (stats.score / 100)) }} transition={{ duration: 2, ease: "easeOut" }} strokeLinecap="round" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-4xl md:text-5xl font-black text-slate-800">{stats.score}</span>
@@ -339,20 +351,14 @@ const TrustScore = () => {
               </div>
             </div>
             <p className="text-[11px] text-slate-400 text-center font-medium max-w-[200px]">
-              {stats.businessName}'s score is in the <span className="text-blue-600 font-bold">top {Math.max(5, 100 - stats.score)}%</span> of institutional accounts.
+              {stats.businessName}'s score is in the <span className="text-blue-600 font-bold">top {percentile}%</span> of institutional accounts.
             </p>
           </motion.div>
 
-          {/* Trend Chart Card */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-8 bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-slate-800">Historical Trust Trend</h3>
-              {/* NEW: Working Chart Dropdown */}
-              <select 
-                value={timeframe}
-                onChange={(e) => setTimeframe(e.target.value)}
-                className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 rounded-lg px-3 py-2 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
-              >
+              <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)} className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 rounded-lg px-3 py-2 outline-none cursor-pointer hover:bg-slate-100 transition-colors">
                 <option value="30_days">Last 30 Days</option>
                 <option value="6_months">Last 6 Months</option>
                 <option value="12_months">Last 12 Months</option>
@@ -368,10 +374,7 @@ const TrustScore = () => {
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#64748b', fontWeight: 600}} dy={10} />
-                  <Tooltip 
-                    contentStyle={{borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}} 
-                    itemStyle={{color: '#1e40af', fontWeight: 'bold'}}
-                  />
+                  <Tooltip contentStyle={{borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}} itemStyle={{color: '#1e40af', fontWeight: 'bold'}} />
                   <Area type="monotone" dataKey="score" stroke="#1e40af" strokeWidth={3} fillOpacity={1} fill="url(#scoreGradient)" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -379,55 +382,42 @@ const TrustScore = () => {
           </motion.div>
         </div>
 
-        {/* AI Advisor & Benchmarking */}
+        {/* REALITY: Dynamic AI Advisor */}
         <AnimatePresence>
           <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mb-8">
-            
-            {/* AI Insights - NEW: Dismissible */}
             {showAiAdvisor ? (
               <motion.div exit={{ opacity: 0, scale: 0.95 }} className="lg:col-span-8 bg-[#EEF2FF] rounded-[24px] md:rounded-[32px] p-6 md:p-8 flex flex-col md:flex-row shadow-sm border border-blue-100 gap-6 relative">
-                <button 
-                  onClick={() => setShowAiAdvisor(false)} 
-                  className="absolute top-4 right-4 p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"
-                >
-                  <X size={16} />
-                </button>
+                <button onClick={() => setShowAiAdvisor(false)} className="absolute top-4 right-4 p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors"><X size={16} /></button>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="p-2 bg-white rounded-xl shadow-sm text-blue-600"><Zap size={18} fill="currentColor" /></div>
                     <h3 className="font-bold text-slate-800 text-sm md:text-base">AI Trust Advisor</h3>
                     <span className="ml-auto md:ml-2 bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">AI <ChevronRight size={10} /></span>
                   </div>
-                  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Predictive Growth</p>
-                  <h2 className="text-2xl md:text-3xl font-black text-[#1e40af] mb-3">+12 Points Available ✨</h2>
-                  <p className="text-xs text-slate-600 leading-relaxed max-w-sm">
-                    Based on your current transaction velocity, we project a 4-point increase by targeting specific verification gaps.
-                  </p>
+                  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">{aiInsight.title}</p>
+                  <h2 className="text-2xl md:text-3xl font-black text-[#1e40af] mb-3">+{aiInsight.points} Points Available ✨</h2>
+                  <p className="text-xs text-slate-600 leading-relaxed max-w-sm">{aiInsight.text}</p>
                 </div>
                 <div className="flex-1 bg-white/60 backdrop-blur-md rounded-2xl p-5 md:p-6 border border-white flex flex-col justify-center">
-                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider block mb-2">+12 POINTS AVAILABLE ↗</span>
+                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider block mb-2">+{aiInsight.points} POINTS AVAILABLE ↗</span>
                   <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                    <span className="font-black text-slate-900">AI suggests:</span> Verify your latest tax residency document to unlock <span className="text-blue-600 font-bold">+12 Points</span> status and reduced network fees.
+                    <span className="font-black text-slate-900">AI suggests:</span> {aiInsight.action}
                   </p>
                 </div>
               </motion.div>
             ) : (
               <div className="lg:col-span-8 flex items-center justify-center p-6 border-2 border-dashed border-slate-200 rounded-[32px]">
-                <p className="text-slate-400 text-sm font-bold flex items-center gap-2"><ShieldCheck size={18}/> All AI suggestions reviewed.</p>
+                <p className="text-slate-400 text-sm font-bold flex items-center gap-2"><CheckCircle2 size={18} className="text-emerald-500"/> All AI suggestions reviewed.</p>
               </div>
             )}
 
-            {/* Benchmarking */}
             <div className="lg:col-span-4 bg-[#1e3a8a] rounded-[24px] md:rounded-[32px] p-6 md:p-8 text-white flex flex-col justify-between shadow-lg relative overflow-hidden">
               <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl"></div>
               <div className="relative z-10 mb-6">
                 <h3 className="text-lg font-bold mb-2">Benchmarking</h3>
                 <p className="text-blue-100/80 text-xs leading-relaxed">Generate a verifiable report to compare your trust profile with top-tier firms.</p>
               </div>
-              <button 
-                onClick={() => navigate('/trust-report')} 
-                className="relative z-10 bg-white text-[#1e40af] w-full py-3.5 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
-              >
+              <button onClick={() => navigate('/trust-report')} className="relative z-10 bg-white text-[#1e40af] w-full py-3.5 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all active:scale-95 shadow-md flex items-center justify-center gap-2">
                 Generate Report <ArrowRightLeft size={16} />
               </button>
             </div>
@@ -438,7 +428,7 @@ const TrustScore = () => {
         <div ref={metricsRef} className="pt-4">
           <h3 className="text-lg font-black text-slate-900 mb-6">Score Breakdown</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-            <MetricCard label="Verification Rate" value={stats.verificationRate} color="bg-blue-600" />
+            <MetricCard label="Verification Rate" value={`${stats.verificationRate}%`} color="bg-blue-600" />
             <MetricCard label="Account Age" value={stats.accountAge} color="bg-purple-500" sub="Growing monthly" />
             <MetricCard label="Tx Volume" value={stats.txVolume} color="bg-orange-500" sub="Consistent activity" />
           </div>
@@ -449,7 +439,7 @@ const TrustScore = () => {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-slate-100 pb-6">
             <h3 className="font-bold text-slate-800 text-lg">How to improve your score</h3>
             <span className="px-4 py-2 bg-blue-50 rounded-full text-[11px] font-bold text-blue-600 uppercase tracking-wide">
-              Est. Improvement: <span className="text-sm font-black ml-1">+12 Pts ✨</span>
+              Est. Improvement: <span className="text-sm font-black ml-1">+{aiInsight.points} Pts ✨</span>
             </span>
           </div>
           <div className="space-y-3">
@@ -461,7 +451,7 @@ const TrustScore = () => {
               btnText="Connect" 
               onAction={() => handleActionClick('Connect')}
             />
-            {/* NEW: Fully Dynamic Progress Bar */}
+            {/* Dynamic Progress Bar */}
             <ActionRow 
               icon={<BarChart3 size={18}/>} 
               title="Reach 10 Transactions" 
@@ -488,9 +478,7 @@ const TrustScore = () => {
 // --- SUB-COMPONENTS ---
 
 const NavItem = ({ icon, label, active = false }) => (
-  <div className={`flex items-center gap-4 px-4 py-3 rounded-xl cursor-pointer transition-all font-bold text-sm ${
-    active ? 'bg-[#f1f5f9] text-[#1e40af]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-  }`}>
+  <div className={`flex items-center gap-4 px-4 py-3 rounded-xl cursor-pointer transition-all font-bold text-sm ${active ? 'bg-[#f1f5f9] text-[#1e40af]' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
     {icon} <span>{label}</span>
   </div>
 );
@@ -511,13 +499,10 @@ const MetricCard = ({ label, value, color, sub = "Max impact on score" }) => (
   </div>
 );
 
-// Updated ActionRow to accept dynamic progress logic
 const ActionRow = ({ icon, title, desc, points, btnText, isProgress, progressValue, onAction }) => (
   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-blue-200 hover:shadow-sm transition-all group gap-4">
     <div className="flex items-center gap-4">
-      <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shrink-0">
-        {icon}
-      </div>
+      <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shrink-0">{icon}</div>
       <div>
         <p className="text-sm font-bold text-slate-800">{title}</p>
         <p className="text-xs text-slate-500 font-medium mt-0.5">{desc}</p>
@@ -533,14 +518,7 @@ const ActionRow = ({ icon, title, desc, points, btnText, isProgress, progressVal
           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{progressValue}% Complete</span>
         </div>
       ) : (
-        <button 
-          onClick={onAction}
-          className={`px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 shrink-0 ${
-            btnText === 'Connect' 
-              ? 'bg-[#1e40af] text-white hover:bg-blue-800' 
-              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-          }`}
-        >
+        <button onClick={onAction} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 shrink-0 ${btnText === 'Connect' ? 'bg-[#1e40af] text-white hover:bg-blue-800' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           {btnText}
         </button>
       )}
