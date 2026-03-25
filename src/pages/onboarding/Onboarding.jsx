@@ -12,20 +12,15 @@ const ShieldIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" heig
 const LockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
 const UserCheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>;
 
-// --- MAIN COMPONENT ---
 const Onboarding = () => {
   const navigate = useNavigate();
 
-  // Core State
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
   const [isLoading, setIsLoading] = useState(false);
   const [globalError, setGlobalError] = useState('');
-  
-  // Field-specific error tracking
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // Master Form State
   const [formData, setFormData] = useState({
     registrationNumber: '',
     industry: '',
@@ -37,37 +32,33 @@ const Onboarding = () => {
     description: ''
   });
 
-  // Pre-fill data and protect the route
+  // PRE-FILL DATA (No longer kicks the user out!)
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       
-      // If no active session, kick them to signup
-      if (!user || error) {
-        console.warn("No active session found. Redirecting to signup...");
-        navigate('/signup'); 
-        return; 
-      }
+      // We removed the 'navigate(/signup)' guardrail here so the page actually loads!
 
-      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();        
-      
-      if (data) {
-        setFormData(prev => ({
-          ...prev,
-          industry: data.industry || user.user_metadata?.industry || ''
-        }));
-      } else if (user.user_metadata) {
-        setFormData(prev => ({
-          ...prev,
-          industry: user.user_metadata.industry || ''
-        }));
+      if (user) {
+        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();        
+        
+        if (data) {
+          setFormData(prev => ({
+            ...prev,
+            industry: data.industry || user.user_metadata?.industry || ''
+          }));
+        } else if (user.user_metadata) {
+          setFormData(prev => ({
+            ...prev,
+            industry: user.user_metadata.industry || ''
+          }));
+        }
       }
     };
 
     fetchProfile();
-  }, [navigate]);
+  }, []); // Removed navigate from dependencies
 
-  // --- VALIDATION ENGINE ---
   const validateCurrentStep = () => {
     const errors = {};
     
@@ -90,10 +81,9 @@ const Onboarding = () => {
     }
 
     setFieldErrors(errors);
-    return Object.keys(errors).length === 0; // Returns true if NO errors
+    return Object.keys(errors).length === 0; 
   };
 
-  // --- NAVIGATION ---
   const nextStep = () => {
     setGlobalError('');
     if (validateCurrentStep()) {
@@ -110,7 +100,6 @@ const Onboarding = () => {
     else navigate('/signup'); 
   };
 
-  // --- INPUT HANDLER ---
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -125,7 +114,6 @@ const Onboarding = () => {
     setGlobalError('');
   };
 
-  // --- SUPABASE SUBMIT ---
   const submitToSupabase = async () => {
     if (!validateCurrentStep()) {
       setGlobalError('Please complete all final details before submitting.');
@@ -137,7 +125,13 @@ const Onboarding = () => {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user logged in. Please sign in again.");
+      
+      // If they get to the end and STILL aren't logged in, we tell them why:
+      if (!user) {
+        setGlobalError("Supabase blocked the save because you are not logged in. (Turn OFF 'Confirm Email' in Supabase settings!)");
+        setIsLoading(false);
+        return;
+      }
 
       const { error: dbError } = await supabase
         .from('profiles')
@@ -188,7 +182,6 @@ const Onboarding = () => {
       <div className="w-full lg:w-[60%] flex flex-col items-center py-8 px-6 sm:px-12 h-screen overflow-y-auto">
         <div className="w-full max-w-lg flex flex-col my-auto">
           
-          {/* Progress Stepper */}
           <div className="w-full mb-10">
             <div className="flex justify-between items-end text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">
               <span>Step {currentStep} of {totalSteps}</span>
@@ -203,7 +196,6 @@ const Onboarding = () => {
             </div>
           </div>
 
-          {/* Global Error Banner */}
           <AnimatePresence>
             {globalError && (
               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mb-6 p-3 bg-red-50 border border-red-200 text-red-600 text-xs font-bold rounded-lg flex items-center gap-2">
@@ -213,7 +205,6 @@ const Onboarding = () => {
             )}
           </AnimatePresence>
 
-          {/* DYNAMIC FORM AREA */}
           <AnimatePresence mode="wait">
             <motion.div key={currentStep} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3, ease: "easeOut" }} className="w-full">
               {currentStep === 1 && <StepOne formData={formData} handleInputChange={handleInputChange} fieldErrors={fieldErrors} />}
@@ -222,7 +213,6 @@ const Onboarding = () => {
             </motion.div>
           </AnimatePresence>
 
-          {/* Action Buttons */}
           <div className="flex items-center justify-between mt-8">
             <button type="button" onClick={prevStep} disabled={isLoading} className="text-gray-400 font-bold text-sm hover:text-gray-600 transition-colors flex items-center gap-2 disabled:opacity-50">
               <span>&larr;</span> Back
@@ -239,7 +229,6 @@ const Onboarding = () => {
             </motion.button>
           </div>
 
-          {/* Footer Trust Badges */}
           <div className="flex flex-wrap items-center justify-center gap-6 mt-16 pb-8 border-t border-gray-100 pt-8">
             <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold tracking-widest uppercase"><ShieldIcon /> BANK-GRADE SECURITY</div>
             <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold tracking-widest uppercase"><LockIcon /> END-TO-END ENCRYPTION</div>
