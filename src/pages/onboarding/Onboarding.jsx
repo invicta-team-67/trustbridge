@@ -152,7 +152,7 @@ const submitToSupabase = async () => {
 
       if (dbError) {
         // This will print the exact reason for the 400 error in your browser console!
-        console.error("🔴 FULL SUPABASE ERROR:", dbError);
+        console.error("FULL SUPABASE ERROR:", dbError);
         throw dbError;
       }
       
