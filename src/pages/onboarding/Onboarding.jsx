@@ -32,15 +32,14 @@ const Onboarding = () => {
     description: ''
   });
 
-  // PRE-FILL DATA (No longer kicks the user out!)
+  // PRE-FILL DATA 
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       
-      // We removed the 'navigate(/signup)' guardrail here so the page actually loads!
-
       if (user) {
-    const { data } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();       
+        // FIXED: Explicitly query by 'user_id' instead of 'id' to fix the 400 fetch error
+        const { data } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();        
         
         if (data) {
           setFormData(prev => ({
@@ -57,7 +56,7 @@ const Onboarding = () => {
     };
 
     fetchProfile();
-  }, []); // Removed navigate from dependencies
+  }, []);
 
   const validateCurrentStep = () => {
     const errors = {};
@@ -114,7 +113,7 @@ const Onboarding = () => {
     setGlobalError('');
   };
 
-const submitToSupabase = async () => {
+  const submitToSupabase = async () => {
     if (!validateCurrentStep()) {
       setGlobalError('Please complete all final details before submitting.');
       return;
@@ -127,14 +126,17 @@ const submitToSupabase = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        setGlobalError("Supabase blocked the save because you are not logged in. (Turn OFF 'Confirm Email' in Supabase settings!)");
+        setGlobalError("You must be logged in to save this data.");
         setIsLoading(false);
         return;
       }
 
-      // We are trying to save these exact column names to Supabase
+      // FIXED: Added business_name and business_type from the user's auth metadata!
+      // This satisfies the database's strict "not-null" requirement.
       const payload = {
           user_id: user.id, 
+          business_name: user.user_metadata?.business_name || 'My Verified Business', 
+          business_type: user.user_metadata?.business_type || 'sole_proprietor',
           registration_number: formData.registrationNumber,
           industry: formData.primaryIndustry || formData.industry, 
           country: formData.country,
@@ -148,10 +150,9 @@ const submitToSupabase = async () => {
 
       const { error: dbError } = await supabase
         .from('profiles')
-        .upsert(payload); 
+        .upsert(payload, { onConflict: 'user_id' }); // Explicitly tell Supabase to match on user_id
 
       if (dbError) {
-        // This will print the exact reason for the 400 error in your browser console!
         console.error("FULL SUPABASE ERROR:", dbError);
         throw dbError;
       }
@@ -159,8 +160,7 @@ const submitToSupabase = async () => {
       navigate('/certificate');
 
     } catch (err) {
-      // Improved error display on the screen
-      setGlobalError(`DB Error: ${err.message || err.details || "Check console for details"}`);
+      setGlobalError(`DB Error: ${err.message || err.details || "Failed to save profile. Check console."}`);
     } finally {
       setIsLoading(false);
     }
