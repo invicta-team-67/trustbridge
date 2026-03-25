@@ -40,7 +40,7 @@ const Onboarding = () => {
       // We removed the 'navigate(/signup)' guardrail here so the page actually loads!
 
       if (user) {
-        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();        
+    const { data } = await supabase.from('profiles').select('*').eq('user_id', user.id).maybeSingle();       
         
         if (data) {
           setFormData(prev => ({
@@ -114,7 +114,7 @@ const Onboarding = () => {
     setGlobalError('');
   };
 
-  const submitToSupabase = async () => {
+const submitToSupabase = async () => {
     if (!validateCurrentStep()) {
       setGlobalError('Please complete all final details before submitting.');
       return;
@@ -126,16 +126,14 @@ const Onboarding = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      // If they get to the end and STILL aren't logged in, we tell them why:
       if (!user) {
         setGlobalError("Supabase blocked the save because you are not logged in. (Turn OFF 'Confirm Email' in Supabase settings!)");
         setIsLoading(false);
         return;
       }
 
-      const { error: dbError } = await supabase
-        .from('profiles')
-        .upsert({
+      // We are trying to save these exact column names to Supabase
+      const payload = {
           user_id: user.id, 
           registration_number: formData.registrationNumber,
           industry: formData.primaryIndustry || formData.industry, 
@@ -146,15 +144,23 @@ const Onboarding = () => {
           description: formData.description,
           verification_status: 'pending',
           updated_at: new Date()
-        }); 
+      };
 
-      if (dbError) throw dbError;
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .upsert(payload); 
+
+      if (dbError) {
+        // This will print the exact reason for the 400 error in your browser console!
+        console.error("🔴 FULL SUPABASE ERROR:", dbError);
+        throw dbError;
+      }
       
       navigate('/certificate');
 
     } catch (err) {
-      console.error("Supabase Error:", err); 
-      setGlobalError(`DB Error: ${err.message || JSON.stringify(err)}`);
+      // Improved error display on the screen
+      setGlobalError(`DB Error: ${err.message || err.details || "Check console for details"}`);
     } finally {
       setIsLoading(false);
     }
