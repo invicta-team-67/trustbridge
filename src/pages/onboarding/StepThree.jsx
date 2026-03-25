@@ -4,7 +4,8 @@ const StepThree = ({ formData, handleInputChange, fieldErrors = {}, handleSubmit
   
   const onFormSubmit = (e) => {
     e.preventDefault();
-    handleSubmit(); // Triggers the submission logic in your parent component
+    // We only call handleSubmit if the parent allows it
+    handleSubmit(); 
   };
 
   return (
@@ -13,7 +14,7 @@ const StepThree = ({ formData, handleInputChange, fieldErrors = {}, handleSubmit
         <h2 className="text-2xl sm:text-3xl font-bold mb-2 tracking-tight text-[#64748b]">
           Final Details
         </h2>
-        <p className="text-gray-400 text-sm font-medium">Almost there, tell us about your business.</p>
+        <p className="text-gray-400 text-sm font-medium">Just one more thing to get you started.</p>
       </div>
 
       <form className="flex flex-col gap-6" onSubmit={onFormSubmit}>
@@ -42,10 +43,38 @@ const StepThree = ({ formData, handleInputChange, fieldErrors = {}, handleSubmit
           </div>
         </div>
 
+        {/* Simple Confirmation Checkbox */}
+        <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+          <input 
+            type="checkbox" 
+            name="confirmAccount"
+            id="confirmAccount"
+            checked={formData.confirmAccount || false}
+            onChange={(e) => {
+              // Custom handler if your handleInputChange doesn't support checkboxes
+              handleInputChange({
+                target: {
+                  name: 'confirmAccount',
+                  value: e.target.checked
+                }
+              });
+            }}
+            className="mt-1 w-4 h-4 text-[#1a56db] border-gray-300 rounded focus:ring-[#1a56db]"
+          />
+          <label htmlFor="confirmAccount" className="text-sm text-gray-600 font-medium cursor-pointer">
+            I confirm that the details provided are correct and I'm ready to create my account.
+          </label>
+        </div>
+
         {/* Complete Setup Button */}
         <button 
           type="submit" 
-          className="w-full mt-4 bg-[#1a56db] hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg shadow-blue-100 transition-all active:scale-[0.98]"
+          disabled={!formData.confirmAccount}
+          className={`w-full mt-4 font-bold py-4 px-4 rounded-xl shadow-lg transition-all active:scale-[0.98] ${
+            formData.confirmAccount 
+              ? 'bg-[#1a56db] hover:bg-blue-700 text-white shadow-blue-100' 
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+          }`}
         >
           Complete Setup
         </button>
