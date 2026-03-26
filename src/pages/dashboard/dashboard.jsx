@@ -43,8 +43,10 @@ const TrustBridgeDashboard = () => {
   const [chartData, setChartData] = useState([]);
   const [dynamicInsights, setDynamicInsights] = useState([]);
 
-  // 1. CONNECTED: Master Data Fetching & Math Logic
+  // 1. CONNECTED & REAL-TIME: Master Data Fetching & Math Logic
   useEffect(() => {
+    let subscription;
+
     const fetchDashboardData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -55,10 +57,10 @@ const TrustBridgeDashboard = () => {
       try {
         const userId = session.user.id;
 
-        // A. Fetch Profile Data
+        // A. Fetch Profile Data (Added created_at for age points)
         const { data: profile } = await supabase
           .from('profiles')
-          .select('business_name, business_type')
+          .select('business_name, business_type, created_at')
           .eq('user_id', userId)
           .maybeSingle();
 
@@ -80,16 +82,23 @@ const TrustBridgeDashboard = () => {
         if (txError) throw txError;
 
         if (txData && txData.length > 0) {
-          // --- REALITY CALCULATION 1: Global Stats ---
           const total = txData.length;
           const verified = txData.filter(t => t.status === 'Verified').length;
           const disputed = txData.filter(t => t.status === 'Disputed').length;
           const pending = txData.filter(t => t.status === 'Pending' || t.status === 'Awaiting').length;
           
-          // Math for Trust Score
-          const vRate = total > 0 ? (verified / total) : 0;
-          const liveScore = Math.min(100, 50 + (vRate * 30) + (Math.min(total, 20)));
-          setStats({ total, verified, disputed, pending, score: Math.round(liveScore) });
+          // --- REALITY CALCULATION 1: Zero-Trust Math (Synced) ---
+          const vRate = total > 0 ? Math.round((verified / total) * 100) : 0;
+          const joinDate = new Date(profile?.created_at || new Date());
+          const daysActive = Math.max(0, (new Date() - joinDate) / (1000 * 60 * 60 * 24));
+          
+          const volumePoints = Math.min(total * 4, 40); 
+          const verificationPoints = Math.round((vRate / 100) * 40); 
+          const agePoints = Math.min(Math.round(daysActive / 18.25), 20); 
+
+          const liveScore = Math.min(100, 0 + volumePoints + verificationPoints + agePoints);
+          
+          setStats({ total, verified, disputed, pending, score: liveScore });
 
           // --- REALITY CALCULATION 2: Priority Alerts ---
           const urgentTx = txData.find(t => t.status === 'Pending' || t.status === 'Disputed' || t.status === 'Awaiting');
@@ -124,10 +133,10 @@ const TrustBridgeDashboard = () => {
           if (disputed > 0) {
             insights.push({ type: 'warning', title: 'Action Required', desc: `You have ${disputed} disputed transaction(s) negatively impacting your score.` });
           }
-          if (total > 0 && vRate < 0.5) {
-            insights.push({ type: 'info', title: 'Verification Rate Low', desc: `Only ${Math.round(vRate * 100)}% of your transactions are verified. Send follow-up links to clients.` });
-          } else if (total > 5) {
-            insights.push({ type: 'success', title: 'Healthy Ledger', desc: 'Your verification rate is excellent. Keep logging transactions to maintain top-tier status.' });
+          if (total > 0 && vRate < 50) {
+            insights.push({ type: 'info', title: 'Verification Rate Low', desc: `Only ${vRate}% of your transactions are verified. Send follow-up links to clients.` });
+          } else if (total >= 10) {
+            insights.push({ type: 'success', title: 'Healthy Volume', desc: 'You have maxed out your transaction volume points. Keep verifying!' });
           }
           if (liveScore > 80) {
             insights.push({ type: 'success', title: 'Top Percentile', desc: 'You are in the top tier of merchants, unlocking higher transaction limits.' });
@@ -141,7 +150,7 @@ const TrustBridgeDashboard = () => {
           // Zero-State Fallbacks (If DB is empty)
           setStats({ total: 0, verified: 0, disputed: 0, pending: 0, score: 0 });
           setDynamicInsights([
-            { type: 'info', title: 'Welcome aboard!', desc: 'Log your first transaction to start building your Trust Score.' },
+            { type: 'info', title: 'Start from Zero', desc: 'Log your first transaction to earn your first 4 Trust Points.' },
             { type: 'success', title: 'Profile Ready', desc: 'Your account is fully configured and ready for ledger entries.' },
             { type: 'info', title: 'Learn the Basics', desc: 'Visit the Trust Center to learn how verifications boost your business credibility.' }
           ]);
@@ -158,6 +167,24 @@ const TrustBridgeDashboard = () => {
     };
 
     fetchDashboardData();
+
+    // Setup Supabase Realtime for the Dashboard
+    const setupRealtime = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      subscription = supabase
+        .channel('dashboard-updates')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${session.user.id}` }, fetchDashboardData)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `user_id=eq.${session.user.id}` }, fetchDashboardData)
+        .subscribe();
+    };
+
+    setupRealtime();
+
+    return () => {
+      if (subscription) supabase.removeChannel(subscription);
+    };
   }, [navigate]);
 
   // Click outside to close notifications
