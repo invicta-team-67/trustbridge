@@ -75,8 +75,10 @@ const Onboarding = () => {
     }
 
     if (currentStep === 3) {
-      if (!formData.primaryIndustry) errors.primaryIndustry = 'Required';
-      if (!formData.description.trim()) errors.description = 'Brief description required';
+// if (!formData.primaryIndustry) newErrors.primaryIndustry = 'Required';
+// if (!formData.businessType) newErrors.businessType = 'Required';
+if (!formData.description) newErrors.description = 'Description is required';
+if (!formData.confirmAccount) newErrors.confirmAccount = 'Please confirm to continue';
     }
 
     setFieldErrors(errors);
