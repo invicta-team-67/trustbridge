@@ -17,13 +17,12 @@ import { supabase } from '../../lib/supabase';
 const TransactionVerification = () => {
   const navigate = useNavigate();
   const [isVerified, setIsVerified] = useState(false);
+  const [isDisputed, setIsDisputed] = useState(false); // NEW: Track dispute state natively
   
-  // NEW: Refined loading states
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [fetchError, setFetchError] = useState(null);
-  const [processingType, setProcessingType] = useState(null); // 'verify' or 'dispute'
+  const [processingType, setProcessingType] = useState(null); 
   
-  // State for dynamic data
   const [transactionId, setTransactionId] = useState(null);
   const [transactionDetails, setTransactionDetails] = useState({
     merchantName: '',
@@ -32,10 +31,9 @@ const TransactionVerification = () => {
     date: '',
     proofFile: '',
     fileSize: '',
-    fileUrl: null // Added to store the actual file link
+    fileUrl: null 
   });
 
-  // CONNECTED: Fetch Data & Session Check
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const urlId = queryParams.get('id'); 
@@ -60,16 +58,28 @@ const TransactionVerification = () => {
         if (data) {
           setTransactionId(data.transaction_id); 
           
+          // FIXED: Fetch the actual Merchant's Business Name from 'profiles' using data.user_id
+          let fetchedMerchantName = 'Verified Merchant';
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('business_name')
+            .eq('user_id', data.user_id)
+            .maybeSingle();
+            
+          if (profileData && profileData.business_name) {
+            fetchedMerchantName = profileData.business_name;
+          }
+          
           const hasFile = !!data.proof_files_urls;
 
           setTransactionDetails({
-            merchantName: data.client_name || 'Verified Merchant',
+            merchantName: fetchedMerchantName, // Correctly mapped to the business!
             service: data.service_provided || 'General Service',
             amount: `₦${parseFloat(data.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`,
             date: new Date(data.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
             proofFile: hasFile ? 'Supporting_Document' : 'No document attached',
             fileSize: hasFile ? 'Encrypted' : '---',
-            fileUrl: data.proof_files_urls // Store the URL for the button
+            fileUrl: data.proof_files_urls 
           });
         }
       } catch (err) {
@@ -83,7 +93,6 @@ const TransactionVerification = () => {
     fetchTransactionData();
   }, [urlId]);
 
-  // CONNECTED: Verify Logic (Update Supabase)
   const handleVerify = async () => {
     if (!transactionId) return;
     setProcessingType('verify');
@@ -93,15 +102,15 @@ const TransactionVerification = () => {
         .from('transactions')
         .update({ status: 'Verified' })
         .eq('transaction_id', urlId);
-      
+        
       if (error) throw error;
 
       setIsVerified(true);
       
-      // REDIRECT UPDATE: Send the user to the new Success Screen
+      // FIXED: Pass the ID so the Success Page knows what to load!
       setTimeout(() => {
-        navigate('/verification-success'); 
-      }, 1500); 
+        navigate(`/verification-success?id=${urlId}`); 
+      }, 1500);
       
     } catch (error) {
       alert("Verification failed: " + error.message);
@@ -110,7 +119,6 @@ const TransactionVerification = () => {
     }
   };
 
-  // CONNECTED: Disputed Logic (Update Supabase)
   const handleDispute = async () => {
     if (!transactionId) return;
     setProcessingType('dispute');
@@ -119,12 +127,13 @@ const TransactionVerification = () => {
       const { error } = await supabase
         .from('transactions')
         .update({ status: 'Disputed' })
-        .eq('transaction_id', urlId); // FIXED: Updated 'id' to 'transaction_id' to match your schema
+        .eq('transaction_id', urlId);
 
       if (error) throw error;
+      
+      // FIXED: Set dispute state locally instead of sending them to a dashboard they don't have
+      setIsDisputed(true);
 
-      alert("Dispute reported. Our compliance team has been notified.");
-      navigate('/dashboard');
     } catch (error) {
       alert("Error reporting dispute: " + error.message);
     } finally {
@@ -132,7 +141,6 @@ const TransactionVerification = () => {
     }
   };
 
-  // UI helper for opening the document
   const handleViewProof = () => {
     if (transactionDetails.fileUrl) {
       window.open(transactionDetails.fileUrl, '_blank');
@@ -180,8 +188,24 @@ const TransactionVerification = () => {
             </motion.div>
           )}
 
+          {/* DISPUTED STATE (NEW PUBLIC UX) */}
+          {!isLoadingData && !fetchError && isDisputed && (
+            <motion.div key="disputed" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md bg-white rounded-[24px] p-8 md:p-10 shadow-xl shadow-slate-200 border border-slate-100 text-center">
+              <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mx-auto mb-6">
+                <AlertTriangle size={32} />
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 mb-3">Dispute Logged</h2>
+              <p className="text-sm text-slate-500 leading-relaxed mb-6">
+                You have flagged this transaction as unrecognized. <span className="font-bold text-slate-800">{transactionDetails.merchantName}</span> has been notified and a dispute ticket has been opened on the ledger.
+              </p>
+              <button onClick={() => window.close()} className="text-slate-500 font-bold text-sm hover:text-slate-800 transition-colors">
+                You may now close this window
+              </button>
+            </motion.div>
+          )}
+
           {/* SUCCESS/MAIN STATE */}
-          {!isLoadingData && !fetchError && (
+          {!isLoadingData && !fetchError && !isDisputed && (
             <motion.div 
               key="content"
               initial={{ opacity: 0, y: 20 }}
