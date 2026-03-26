@@ -36,7 +36,8 @@ const TrustScore = () => {
     accountAge: '0y',
     txVolume: '0%',
     totalTransactions: 0, 
-    rawTransactions: [], // Added to power real historical charts
+    rawTransactions: [], 
+    joinDate: null, // Added to track exact age for charts
     isLoading: true
   });
 
@@ -68,18 +69,24 @@ const TrustScore = () => {
           .order('created_at', { ascending: true }); 
 
         if (profile) {
+          // --- ZERO-TRUST SCORING MATH (Starts at 0) ---
           const totalTx = transactions ? transactions.length : 0;
           const verifiedTx = transactions ? transactions.filter(t => t.status === 'Verified').length : 0;
-          
           const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 0;
           
-          // Dynamic Score Calculation (Base 50 + Volume + Verification)
-          const volumePoints = Math.min(totalTx * 2, 20); 
-          const verificationPoints = Math.round((vRate / 100) * 30); 
-          const finalScore = Math.min(100, 50 + volumePoints + verificationPoints);
-          
           const joinDate = new Date(profile.created_at || new Date());
-          const years = ((new Date() - joinDate) / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1);
+          const daysActive = Math.max(0, (new Date() - joinDate) / (1000 * 60 * 60 * 24));
+          const years = (daysActive / 365.25).toFixed(1);
+
+          // Volume: 4 points per transaction, max 40 points
+          const volumePoints = Math.min(totalTx * 4, 40); 
+          // Verification: Max 40 points depending on their rate
+          const verificationPoints = Math.round((vRate / 100) * 40); 
+          // Age: Max 20 points (gets max if account is roughly 1 year / 365 days old)
+          const agePoints = Math.min(Math.round(daysActive / 18.25), 20); 
+          
+          // Final Score starts from 0 exactly
+          const finalScore = Math.min(100, 0 + volumePoints + verificationPoints + agePoints);
 
           setStats({
             businessName: profile.business_name || 'Your Business',
@@ -87,42 +94,43 @@ const TrustScore = () => {
             score: finalScore,
             verificationRate: vRate,
             accountAge: `${years}y`,
-            txVolume: `${Math.min(100, (totalTx / 50) * 100).toFixed(0)}%`, // True dynamic volume based on 50 tx goal
+            txVolume: `${Math.min(100, (totalTx / 10) * 100).toFixed(0)}%`, // Volume maxes out at 10 txs
             totalTransactions: totalTx,
             rawTransactions: transactions || [],
+            joinDate: profile.created_at,
             isLoading: false
           });
 
-          // --- Dynamic AI Advisor Logic ---
+          // --- Dynamic AI Advisor Logic (Updated for 0-based Math) ---
           if (totalTx === 0) {
             setAiInsight({
-              points: 10,
-              title: "Log Your First Transaction",
-              text: "You haven't recorded any activity yet. Start building your Trust Score by logging your first transaction.",
-              action: "Log a transaction to unlock your initial Trust Score baseline."
+              points: 4,
+              title: "Start from Zero",
+              text: "You haven't recorded any activity yet. You currently have 0 points. Let's fix that.",
+              action: "Log your first transaction to earn your first 4 Trust Points."
             });
           } else if (vRate < 80) {
-            const lostPoints = Math.max(2, Math.round((100 - vRate) * 0.15));
+            const lostPoints = Math.max(2, Math.round((100 - vRate) * 0.40));
             setAiInsight({
               points: lostPoints,
               title: "Improve Verification Rate",
-              text: `Your verification rate is currently at ${vRate}%. Follow up with clients to verify pending transactions.`,
-              action: `Verify pending transactions to recover ${lostPoints} Points and improve your tier.`
+              text: `Your verification rate is currently at ${vRate}%. Clients need to verify your pending logs.`,
+              action: `Verify pending transactions to recover ${lostPoints} Points and boost your score.`
             });
           } else if (totalTx < 10) {
             const needed = 10 - totalTx;
             setAiInsight({
-              points: needed * 2,
+              points: needed * 4,
               title: "Increase Transaction Volume",
-              text: `You need ${needed} more verified transaction(s) to reach the 'Frequent Trader' milestone.`,
-              action: `Log more transactions to unlock +${needed * 2} Points status and reduced network fees.`
+              text: `You need ${needed} more verified transaction(s) to max out your Volume Points.`,
+              action: `Log more transactions to unlock +${needed * 4} Points and build credibility.`
             });
           } else {
             setAiInsight({
-              points: 12,
-              title: "Upload Tax Documentation",
-              text: "Your transaction metrics are excellent. Take the final step by verifying your institutional identity.",
-              action: "Verify your latest tax residency document to unlock +12 Points status and premium features."
+              points: 5,
+              title: "Connect External Identity",
+              text: "Your transaction metrics are excellent. Take the final step by verifying your identity externally.",
+              action: "Verify your LinkedIn or Company Registration to max out your profile."
             });
           }
 
@@ -147,7 +155,6 @@ const TrustScore = () => {
 
     fetchData();
 
-    // Supabase Realtime Listener (Updates UI instantly without reload)
     const setupRealtime = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -166,7 +173,7 @@ const TrustScore = () => {
     };
   }, [navigate]);
 
-  // 2. Real Historical Chart Generator (No Dummy Data)
+  // 2. Real Historical Chart Generator (Zero-Based Math)
   useEffect(() => {
     if (stats.isLoading) return;
     
@@ -174,16 +181,20 @@ const TrustScore = () => {
     let data = [];
     const now = new Date();
 
-    // Helper to calculate score at a historical point in time
     const calculateHistoricalScore = (upToDate) => {
       const historicalTxs = transactions.filter(t => new Date(t.created_at) <= upToDate);
       const totalTx = historicalTxs.length;
       const verifiedTx = historicalTxs.filter(t => t.status === 'Verified').length;
       
       const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 0;
-      const volumePoints = Math.min(totalTx * 2, 20); 
-      const verificationPoints = Math.round((vRate / 100) * 30); 
-      return Math.min(100, 50 + volumePoints + verificationPoints);
+      const volumePoints = Math.min(totalTx * 4, 40); 
+      const verificationPoints = Math.round((vRate / 100) * 40); 
+      
+      const joinDate = new Date(stats.joinDate || now);
+      const daysActive = Math.max(0, (upToDate - joinDate) / (1000 * 60 * 60 * 24));
+      const agePoints = Math.min(Math.round(daysActive / 18.25), 20);
+
+      return Math.min(100, 0 + volumePoints + verificationPoints + agePoints);
     };
 
     if (timeframe === '30_days') {
@@ -206,7 +217,7 @@ const TrustScore = () => {
     }
     
     setDynamicTrendData(data);
-  }, [timeframe, stats.rawTransactions, stats.isLoading]);
+  }, [timeframe, stats.rawTransactions, stats.isLoading, stats.joinDate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -237,7 +248,6 @@ const TrustScore = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [notificationsRef]);
 
-  // Dynamic Percentile Math
   const percentile = Math.max(1, Math.round(100 - stats.score + (stats.totalTransactions * 0.5)));
 
   const SidebarContent = () => (
@@ -365,7 +375,7 @@ const TrustScore = () => {
                 <span className="text-4xl md:text-5xl font-black text-slate-800">{stats.score}</span>
                 <span className="text-xs font-bold text-slate-400">/ 100</span>
                 <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-2">
-                  {stats.score > 80 ? 'Highly Trusted' : stats.score > 60 ? 'Trusted' : 'Developing'}
+                  {stats.score > 80 ? 'Highly Trusted' : stats.score > 60 ? 'Trusted' : stats.score > 20 ? 'Developing' : 'New Account'}
                 </span>
               </div>
             </div>
