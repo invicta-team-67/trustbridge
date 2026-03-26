@@ -55,20 +55,23 @@ const TrustScore = () => {
       userId = session.user.id;
 
       try {
-        // Fetch Profile and Transactions
+        // Fetch Profile
         const { data: profile } = await supabase
           .from('profiles')
           .select('business_name, created_at')
           .eq('user_id', userId)
           .maybeSingle();
 
-        const { data: transactions } = await supabase
+        // FIXED: Replaced strict select with select('*') to match Dashboard perfectly
+        const { data: transactions, error: txError } = await supabase
           .from('transactions')
-          .select('id, status, amount, created_at, client_name')
+          .select('*')
           .eq('user_id', userId)
-          .order('created_at', { ascending: true }); 
+          .order('created_at', { ascending: false }); 
 
-        // --- PROGRESSIVE ADDITIVE SCORING MATH ---
+        if (txError) console.error("Transaction fetch error:", txError);
+
+        // --- 100% SYNCED MATH WITH DASHBOARD (0-100 Zero Trust) ---
         const totalTx = transactions ? transactions.length : 0;
         const verifiedTx = transactions ? transactions.filter(t => t.status === 'Verified').length : 0;
         const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 0;
@@ -77,12 +80,11 @@ const TrustScore = () => {
         const daysActive = Math.max(0, (new Date() - joinDate) / (1000 * 60 * 60 * 24));
         const years = (daysActive / 365.25).toFixed(1);
 
-        // Additive Math: +4 for volume, +4 for verification. (Score never drops for logging)
         const volumePoints = Math.min(totalTx * 4, 40); 
-        const verificationPoints = Math.min(verifiedTx * 4, 40); 
+        const verificationPoints = Math.round((vRate / 100) * 40); 
         const agePoints = Math.min(Math.round(daysActive / 18.25), 20); 
         
-        const finalScore = Math.min(100, volumePoints + verificationPoints + agePoints);
+        const finalScore = Math.min(100, 0 + volumePoints + verificationPoints + agePoints);
 
         setStats({
           businessName: profile?.business_name || 'Your Business',
@@ -90,14 +92,14 @@ const TrustScore = () => {
           score: finalScore,
           verificationRate: vRate,
           accountAge: `${years}y`,
-          txVolume: `${Math.min(100, (totalTx / 10) * 100).toFixed(0)}%`, // Volume maxes out at 10 txs
+          txVolume: `${Math.min(100, (totalTx / 10) * 100).toFixed(0)}%`, 
           totalTransactions: totalTx,
           rawTransactions: transactions || [],
           joinDate: profile?.created_at || new Date(),
           isLoading: false
         });
 
-        // --- Dynamic AI Advisor Logic (Updated for Additive Math) ---
+        // --- Dynamic AI Advisor Logic ---
         if (totalTx === 0) {
           setAiInsight({
             points: 4,
@@ -105,16 +107,15 @@ const TrustScore = () => {
             text: "You haven't recorded any activity yet. You currently have 0 points. Let's fix that.",
             action: "Log your first transaction to earn your first 4 Trust Points."
           });
-        } else if (verifiedTx < totalTx && verificationPoints < 40) {
-          const pending = totalTx - verifiedTx;
-          const obtainable = Math.min(pending * 4, 40 - verificationPoints);
+        } else if (vRate < 80) {
+          const lostPoints = Math.max(2, Math.round((100 - vRate) * 0.40));
           setAiInsight({
-            points: obtainable,
-            title: "Verify Pending Transactions",
-            text: `You have ${pending} unverified transaction(s). Follow up with your clients to verify them.`,
-            action: `Verify pending transactions to unlock +${obtainable} Points and boost your score.`
+            points: lostPoints,
+            title: "Improve Verification Rate",
+            text: `Your verification rate is currently at ${vRate}%. Clients need to verify your pending logs.`,
+            action: `Verify pending transactions to recover ${lostPoints} Points and boost your score.`
           });
-        } else if (volumePoints < 40) {
+        } else if (totalTx < 10) {
           const needed = 10 - totalTx;
           setAiInsight({
             points: needed * 4,
@@ -135,7 +136,6 @@ const TrustScore = () => {
         if (transactions) {
           const alerts = transactions
             .filter(t => t.status === 'Disputed' || t.status === 'Pending')
-            .reverse()
             .slice(0, 3)
             .map(t => ({
               id: t.id,
@@ -169,7 +169,7 @@ const TrustScore = () => {
     };
   }, [navigate]);
 
-  // 2. Real Historical Chart Generator (Additive Math)
+  // 2. Real Historical Chart Generator 
   useEffect(() => {
     if (stats.isLoading) return;
     
@@ -182,14 +182,15 @@ const TrustScore = () => {
       const totalTx = historicalTxs.length;
       const verifiedTx = historicalTxs.filter(t => t.status === 'Verified').length;
       
+      const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 0;
       const volumePoints = Math.min(totalTx * 4, 40); 
-      const verificationPoints = Math.min(verifiedTx * 4, 40); 
+      const verificationPoints = Math.round((vRate / 100) * 40); 
       
       const joinDate = new Date(stats.joinDate || now);
       const daysActive = Math.max(0, (upToDate - joinDate) / (1000 * 60 * 60 * 24));
       const agePoints = Math.min(Math.round(daysActive / 18.25), 20);
 
-      return Math.min(100, volumePoints + verificationPoints + agePoints);
+      return Math.min(100, 0 + volumePoints + verificationPoints + agePoints);
     };
 
     if (timeframe === '30_days') {
@@ -475,7 +476,7 @@ const TrustScore = () => {
               btnText="Connect" 
               onAction={() => handleActionClick('Connect')}
             />
-            {/* Fully Real Progress Bar mapping to DB Total Transactions */}
+            {/* Dynamic Progress Bar */}
             <ActionRow 
               icon={<BarChart3 size={18}/>} 
               title="Reach 10 Transactions" 
