@@ -24,7 +24,7 @@ const TrustScore = () => {
   const notificationsRef = useRef(null);
 
   const [notifications, setNotifications] = useState([]);
-  const [aiInsight, setAiInsight] = useState({ points: 0, title: 'Analysis Pending', text: 'Waiting for data...', action: 'Add data to see insights.' });
+  const [aiInsight, setAiInsight] = useState({ points: 0, title: 'Analyzing...', text: 'Fetching ledger data...', action: '...' });
   const [dynamicTrendData, setDynamicTrendData] = useState([]);
   const [stats, setStats] = useState({
     businessName: '...',
@@ -33,11 +33,13 @@ const TrustScore = () => {
     verificationRate: 0, 
     accountAge: '0y',
     txVolume: '0%',
-    totalTransactions: 0, 
+    totalTransactions: 0,
+    linkedinVerified: false,
+    taxVerified: false,
     isLoading: true
   });
 
-  // 1. REAL-TIME DATA FETCHING
+  // 1. REAL-TIME DATA & SCORE CALCULATION
   useEffect(() => {
     const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -63,57 +65,54 @@ const TrustScore = () => {
           const verifiedTx = transactions ? transactions.filter(t => t.status === 'Verified').length : 0;
           const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 0;
           
-          // --- SCRATCH SCORE LOGIC ---
-          // No dummy +50 baseline. Score is earned 100% from activity.
-          let calculatedScore = 0;
-          calculatedScore += Math.min(totalTx * 3, 30); // Max 30 pts for activity
-          calculatedScore += Math.round((vRate / 100) * 40); // Max 40 pts for verification quality
-          if (profile.linkedin_verified) calculatedScore += 15;
-          if (profile.tax_verified) calculatedScore += 15;
+          // --- SCRATCH SCORE MATH (Max 100) ---
+          let earnedScore = 0;
+          earnedScore += Math.min(totalTx * 3, 30); // Activity (Max 30)
+          earnedScore += Math.round((vRate / 100) * 40); // Verification (Max 40)
+          if (profile.linkedin_verified) earnedScore += 15; // Social proof
+          if (profile.tax_verified) earnedScore += 15; // Institutional proof
           
           const joinDate = new Date(profile.created_at || new Date());
           const years = ((new Date() - joinDate) / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1);
 
           setStats({
-            businessName: profile.business_name || 'Business Name',
+            businessName: profile.business_name || 'Your Business',
             avatarName: (profile.business_name || 'U').split(' ').join('+'),
-            score: calculatedScore,
+            score: earnedScore,
             verificationRate: vRate,
             accountAge: `${years}y`,
-            txVolume: `${Math.min(100, (totalTx / 20) * 100)}%`, // Scaled to a 20-tx "Full Volume" target
+            txVolume: `${Math.min(100, Math.round((totalTx / 15) * 100))}%`, 
             totalTransactions: totalTx,
+            linkedinVerified: profile.linkedin_verified || false,
+            taxVerified: profile.tax_verified || false,
             isLoading: false
           });
 
-          // AI Advisor logic strictly matching current stats
+          // AI Insights based on real-time gaps
           if (totalTx === 0) {
-            setAiInsight({ points: 20, title: "Identity Baseline", text: "Your score is 0 because no transactions are logged.", action: "Log your first business transaction to establish your trust baseline." });
-          } else if (vRate < 70) {
-            setAiInsight({ points: 15, title: "Low Verification", text: `Your ${vRate}% verification rate is pulling your score down.`, action: "Request verification for your pending items." });
+            setAiInsight({ points: 30, title: "Initial Baseline", text: "Your score is currently 0. Log your first transaction to start building history.", action: "Add a transaction record to unlock your score." });
+          } else if (vRate < 80) {
+            setAiInsight({ points: 12, title: "Verification Boost", text: "You have pending transactions. Verified records carry 2x more weight.", action: "Request verification from your clients." });
           } else {
-            setAiInsight({ points: 10, title: "Next Milestone", text: "Verified activity is high.", action: "Connect institutional documents in Settings to reach 'Highly Trusted' status." });
+            setAiInsight({ points: 15, title: "Identity Verification", text: "Your ledger is healthy. Add institutional proof to reach the next tier.", action: "Connect your LinkedIn profile below." });
           }
 
-          // Real-time notifications for pending/disputed items
           if (transactions) {
             setNotifications(transactions.filter(t => t.status !== 'Verified').reverse().slice(0, 3).map(t => ({ id: t.id, type: t.status, client: t.client_name || 'Client' })));
           }
 
-          // 2. REAL-TIME CHART LOGIC (Mapping actual transaction growth)
+          // Real-time chart mapping
           const trend = [];
           if (totalTx === 0) {
-             trend.push({ month: 'Start', score: 0 }, { month: 'Now', score: 0 });
+            trend.push({ month: 'Start', score: 0 }, { month: 'Now', score: 0 });
           } else {
-            // Group transactions by month to see real score growth over time
-            const sortedByDate = [...transactions].sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
-            sortedByDate.forEach((tx, index) => {
-              const txDate = new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short' });
-              const cumulativeTotal = index + 1;
-              const cumulativeVerified = sortedByDate.slice(0, cumulativeTotal).filter(t => t.status === 'Verified').length;
-              const runningVRate = Math.round((cumulativeVerified / cumulativeTotal) * 100);
-              const runningScore = Math.min(100, (cumulativeTotal * 3) + Math.round((runningVRate / 100) * 40));
-              
-              trend.push({ month: txDate, score: runningScore });
+            transactions.forEach((tx, i) => {
+              const month = new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short' });
+              const currentTotal = i + 1;
+              const currentVerified = transactions.slice(0, currentTotal).filter(t => t.status === 'Verified').length;
+              const currentVRate = (currentVerified / currentTotal);
+              const currentScore = Math.min(100, (currentTotal * 3) + Math.round(currentVRate * 40));
+              trend.push({ month, score: currentScore });
             });
           }
           setDynamicTrendData(trend);
@@ -124,8 +123,6 @@ const TrustScore = () => {
   }, [navigate]);
 
   const handleLogout = async () => { await supabase.auth.signOut(); navigate('/login'); };
-
-  // Percentile Logic: Now purely based on score vs a static market average (70)
   const percentile = stats.score === 0 ? 100 : Math.max(1, 100 - stats.score);
 
   const SidebarContent = () => (
@@ -145,7 +142,7 @@ const TrustScore = () => {
         </nav>
       </div>
       <div className="mt-auto p-6 border-t border-slate-100">
-        <button onClick={handleLogout} className="flex items-center gap-3 text-slate-400 hover:text-rose-500 font-medium transition-colors w-full"><LogOut size={18} /> <span>Log out</span></button>
+        <button onClick={handleLogout} className="flex items-center gap-3 text-slate-400 hover:text-rose-500 font-medium w-full transition-colors"><LogOut size={18} /> <span>Log out</span></button>
       </div>
     </>
   );
@@ -155,79 +152,117 @@ const TrustScore = () => {
       <aside className="hidden lg:flex w-64 bg-white border-r border-slate-200 flex-col fixed h-full z-30"><SidebarContent /></aside>
 
       <main className="flex-1 lg:ml-64 p-4 md:p-8 lg:p-10 w-full">
-        <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-10">
-          <div>
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">Trust Score Analysis</h1>
-            <p className="text-[11px] md:text-sm text-slate-400 font-medium tracking-tight">Real-time credibility sync for {stats.businessName}.</p>
+        {/* Header */}
+        <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-10 w-full">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 bg-white rounded-lg border border-slate-200 text-slate-600"><Menu size={20} /></button>
+            <div className="truncate">
+              <h1 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">Trust Score Analysis</h1>
+              <p className="text-[11px] md:text-sm text-slate-400 font-medium truncate">Live sync for {stats.businessName}.</p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
-             <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-2 bg-white rounded-full border border-slate-200 text-slate-400">
-               <Bell size={20} />
-               {notifications.length > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
-             </button>
-             <img src={`https://ui-avatars.com/api/?name=${stats.avatarName}&background=1e40af&color=fff`} className="w-10 h-10 rounded-full border border-slate-200" alt="profile" />
+            <Bell className="text-slate-400 cursor-pointer" size={20} />
+            <img src={`https://ui-avatars.com/api/?name=${stats.avatarName}&background=1e40af&color=fff`} className="w-10 h-10 rounded-full border border-slate-200" alt="profile" />
           </div>
         </header>
 
+        {/* Score & Chart */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
-          {/* Main Score Card */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-4 bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-4 bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center justify-center relative">
             <div className="relative w-40 h-40 mb-6">
               <svg className="w-full h-full transform -rotate-90">
                 <circle cx="50%" cy="50%" r="40%" stroke="#F1F5F9" strokeWidth="12" fill="transparent" />
                 <motion.circle cx="50%" cy="50%" r="40%" stroke="#1e40af" strokeWidth="12" fill="transparent" strokeDasharray="251" initial={{ strokeDashoffset: 251 }} animate={{ strokeDashoffset: 251 * (1 - (stats.score / 100)) }} transition={{ duration: 1.5 }} strokeLinecap="round" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-black text-slate-800">{stats.score}</span>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Trust Score</span>
+                <span className="text-5xl font-black text-slate-800">{stats.score}</span>
+                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">Earned Points</span>
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 text-center font-bold">Top <span className="text-blue-600">{percentile}%</span> of new businesses</p>
+            <p className="text-[11px] text-slate-400 text-center font-bold uppercase tracking-tight">Top <span className="text-blue-600">{percentile}%</span> of new accounts</p>
           </motion.div>
 
-          {/* Real-time Trend Chart */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-8 bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm min-h-[300px]">
-            <h3 className="font-bold text-slate-800 mb-6">Verified Growth Trend</h3>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-bold text-slate-800">Historical Growth</h3>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Real-time Data Only</div>
+            </div>
             <div className="w-full h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dynamicTrendData}>
                   <defs>
-                    <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#1e40af" stopOpacity={0.1}/><stop offset="95%" stopColor="#1e40af" stopOpacity={0}/></linearGradient>
+                    <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#1e40af" stopOpacity={0.1}/><stop offset="95%" stopColor="#1e40af" stopOpacity={0}/></linearGradient>
                   </defs>
                   <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="score" stroke="#1e40af" strokeWidth={3} fill="url(#scoreGradient)" />
+                  <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}} />
+                  <Area type="monotone" dataKey="score" stroke="#1e40af" strokeWidth={3} fill="url(#scoreGrad)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </motion.div>
         </div>
 
-        {/* Dynamic Insight Advisor */}
+        {/* AI Advisor - Premium Look */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
-          <div className="lg:col-span-8 bg-[#EEF2FF] rounded-[32px] p-8 border border-blue-100">
-            <div className="flex items-center gap-2 mb-4">
-               <Zap size={18} className="text-blue-600" fill="currentColor"/>
-               <h3 className="font-bold text-slate-800">AI Trust Advisor</h3>
-            </div>
-            <h2 className="text-2xl font-black text-[#1e40af] mb-2">{aiInsight.title}</h2>
-            <p className="text-sm text-slate-600 mb-6">{aiInsight.text}</p>
-            <div className="p-4 bg-white rounded-2xl border border-blue-100 text-xs font-medium text-slate-700">
-               <span className="font-black text-blue-600 uppercase mr-2">Action:</span> {aiInsight.action}
+          <div className="lg:col-span-8 bg-[#EEF2FF] rounded-[32px] p-8 border border-blue-100 relative overflow-hidden">
+            <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-400/10 rounded-full blur-3xl"></div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-4">
+                <Zap size={18} className="text-blue-600" fill="currentColor"/>
+                <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wide">AI Recommendation</h3>
+              </div>
+              <h2 className="text-2xl font-black text-[#1e40af] mb-2">+{aiInsight.points} Points Available ✨</h2>
+              <p className="text-sm text-slate-600 mb-6 max-w-md">{aiInsight.text}</p>
+              <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-xl text-xs font-bold text-[#1e40af] border border-blue-100">
+                <ChevronRight size={14} /> {aiInsight.action}
+              </div>
             </div>
           </div>
 
-          <div className="lg:col-span-4 bg-[#1e3a8a] rounded-[32px] p-8 text-white flex flex-col justify-between">
-             <h3 className="text-lg font-bold mb-2 tracking-tight">Trust Verification</h3>
-             <p className="text-blue-100/70 text-xs leading-relaxed mb-6">Export your verified transaction history as an institutional PDF report.</p>
-             <button onClick={() => navigate('/trust-report')} className="w-full bg-white text-[#1e40af] py-3 rounded-xl font-bold text-sm shadow-xl active:scale-95 transition-all">Generate Report</button>
+          <div className="lg:col-span-4 bg-[#1e3a8a] rounded-[32px] p-8 text-white flex flex-col justify-between shadow-xl">
+             <h3 className="text-lg font-bold mb-2">Trust Ledger</h3>
+             <p className="text-blue-100/70 text-xs leading-relaxed mb-6">Generate a verified institutional report of your real-time score and transaction history.</p>
+             <button onClick={() => navigate('/trust-report')} className="w-full bg-white text-[#1e40af] py-3 rounded-xl font-black text-sm hover:bg-blue-50 transition-all">Generate Report</button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        {/* Metrics Breakdown */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
           <MetricCard label="Verification Rate" value={`${stats.verificationRate}%`} color="bg-blue-600" />
           <MetricCard label="Account Age" value={stats.accountAge} color="bg-indigo-500" />
-          <MetricCard label="Tx Volume" value={stats.txVolume} color="bg-amber-500" />
+          <MetricCard label="Tx Volume" value={stats.txVolume} color="bg-orange-500" />
+        </div>
+
+        {/* Action List - High Quality Component */}
+        <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm">
+          <h3 className="font-bold text-slate-800 text-lg mb-6">Improve Your Credibility</h3>
+          <div className="space-y-4">
+            <ActionRow 
+              icon={<LinkIcon size={18}/>} 
+              title="Verify LinkedIn Profile" 
+              desc="Add institutional social proof to your trust profile" 
+              points="+15 pts" 
+              btnText={stats.linkedinVerified ? "Verified" : "Connect"}
+              isCompleted={stats.linkedinVerified}
+            />
+            <ActionRow 
+              icon={<BarChart3 size={18}/>} 
+              title="Reach 10 Transactions" 
+              desc="Unlock higher credibility tiers by logging more activity" 
+              points="+10 pts" 
+              isProgress 
+              progressValue={Math.min(100, Math.round((stats.totalTransactions / 10) * 100))}
+            />
+            <ActionRow 
+              icon={<FileText size={18}/>} 
+              title="Institutional Tax ID" 
+              desc="Verify your business legal residency status" 
+              points="+15 pts" 
+              btnText={stats.taxVerified ? "Verified" : "Upload"}
+              isCompleted={stats.taxVerified}
+            />
+          </div>
         </div>
       </main>
     </div>
@@ -235,7 +270,7 @@ const TrustScore = () => {
 };
 
 const NavItem = ({ icon, label, active = false }) => (
-  <div className={`flex items-center gap-4 px-4 py-3 rounded-xl cursor-pointer transition-all font-bold text-sm ${active ? 'bg-[#f1f5f9] text-[#1e40af]' : 'text-slate-500 hover:bg-slate-50'}`}>
+  <div className={`flex items-center gap-4 px-4 py-3 rounded-xl cursor-pointer transition-all font-bold text-sm ${active ? 'bg-blue-50 text-[#1e40af]' : 'text-slate-500 hover:bg-slate-50'}`}>
     {icon} <span>{label}</span>
   </div>
 );
@@ -246,6 +281,30 @@ const MetricCard = ({ label, value, color }) => (
     <p className="text-3xl font-black text-slate-800 mb-4">{value}</p>
     <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
       <div className={`${color} h-full transition-all duration-1000`} style={{ width: value.includes('%') ? value : '20%' }}></div>
+    </div>
+  </div>
+);
+
+const ActionRow = ({ icon, title, desc, points, btnText, isProgress, progressValue, isCompleted }) => (
+  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-blue-200 transition-all group gap-4">
+    <div className="flex items-center gap-4">
+      <div className={`w-12 h-12 ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'} rounded-xl flex items-center justify-center shrink-0`}>{icon}</div>
+      <div>
+        <p className="text-sm font-bold text-slate-800">{title}</p>
+        <p className="text-xs text-slate-500 font-medium">{desc}</p>
+      </div>
+    </div>
+    <div className="flex items-center justify-between w-full sm:w-auto gap-6">
+      <span className={`text-[10px] font-black ${isCompleted ? 'text-emerald-500' : 'text-blue-600'} bg-slate-50 px-3 py-1 rounded-lg uppercase`}>{points}</span>
+      {isProgress ? (
+        <div className="w-24 bg-slate-100 h-1.5 rounded-full overflow-hidden shrink-0">
+          <div className="bg-blue-600 h-full" style={{ width: `${progressValue}%` }}></div>
+        </div>
+      ) : (
+        <button disabled={isCompleted} className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-[#1e40af] text-white hover:bg-blue-800'}`}>
+          {btnText}
+        </button>
+      )}
     </div>
   </div>
 );
