@@ -37,7 +37,7 @@ const TrustScore = () => {
     txVolume: '0%',
     totalTransactions: 0, 
     rawTransactions: [], 
-    joinDate: null, // Added to track exact age for charts
+    joinDate: null, 
     isLoading: true
   });
 
@@ -68,85 +68,81 @@ const TrustScore = () => {
           .eq('user_id', userId)
           .order('created_at', { ascending: true }); 
 
-        if (profile) {
-          // --- ZERO-TRUST SCORING MATH (Starts at 0) ---
-          const totalTx = transactions ? transactions.length : 0;
-          const verifiedTx = transactions ? transactions.filter(t => t.status === 'Verified').length : 0;
-          const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 0;
-          
-          const joinDate = new Date(profile.created_at || new Date());
-          const daysActive = Math.max(0, (new Date() - joinDate) / (1000 * 60 * 60 * 24));
-          const years = (daysActive / 365.25).toFixed(1);
+        // --- PROGRESSIVE ADDITIVE SCORING MATH ---
+        const totalTx = transactions ? transactions.length : 0;
+        const verifiedTx = transactions ? transactions.filter(t => t.status === 'Verified').length : 0;
+        const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 0;
+        
+        const joinDate = new Date(profile?.created_at || new Date());
+        const daysActive = Math.max(0, (new Date() - joinDate) / (1000 * 60 * 60 * 24));
+        const years = (daysActive / 365.25).toFixed(1);
 
-          // Volume: 4 points per transaction, max 40 points
-          const volumePoints = Math.min(totalTx * 4, 40); 
-          // Verification: Max 40 points depending on their rate
-          const verificationPoints = Math.round((vRate / 100) * 40); 
-          // Age: Max 20 points (gets max if account is roughly 1 year / 365 days old)
-          const agePoints = Math.min(Math.round(daysActive / 18.25), 20); 
-          
-          // Final Score starts from 0 exactly
-          const finalScore = Math.min(100, 0 + volumePoints + verificationPoints + agePoints);
+        // Additive Math: +4 for volume, +4 for verification. (Score never drops for logging)
+        const volumePoints = Math.min(totalTx * 4, 40); 
+        const verificationPoints = Math.min(verifiedTx * 4, 40); 
+        const agePoints = Math.min(Math.round(daysActive / 18.25), 20); 
+        
+        const finalScore = Math.min(100, volumePoints + verificationPoints + agePoints);
 
-          setStats({
-            businessName: profile.business_name || 'Your Business',
-            avatarName: (profile.business_name || 'User').split(' ').join('+'),
-            score: finalScore,
-            verificationRate: vRate,
-            accountAge: `${years}y`,
-            txVolume: `${Math.min(100, (totalTx / 10) * 100).toFixed(0)}%`, // Volume maxes out at 10 txs
-            totalTransactions: totalTx,
-            rawTransactions: transactions || [],
-            joinDate: profile.created_at,
-            isLoading: false
+        setStats({
+          businessName: profile?.business_name || 'Your Business',
+          avatarName: (profile?.business_name || 'User').split(' ').join('+'),
+          score: finalScore,
+          verificationRate: vRate,
+          accountAge: `${years}y`,
+          txVolume: `${Math.min(100, (totalTx / 10) * 100).toFixed(0)}%`, // Volume maxes out at 10 txs
+          totalTransactions: totalTx,
+          rawTransactions: transactions || [],
+          joinDate: profile?.created_at || new Date(),
+          isLoading: false
+        });
+
+        // --- Dynamic AI Advisor Logic (Updated for Additive Math) ---
+        if (totalTx === 0) {
+          setAiInsight({
+            points: 4,
+            title: "Start from Zero",
+            text: "You haven't recorded any activity yet. You currently have 0 points. Let's fix that.",
+            action: "Log your first transaction to earn your first 4 Trust Points."
           });
+        } else if (verifiedTx < totalTx && verificationPoints < 40) {
+          const pending = totalTx - verifiedTx;
+          const obtainable = Math.min(pending * 4, 40 - verificationPoints);
+          setAiInsight({
+            points: obtainable,
+            title: "Verify Pending Transactions",
+            text: `You have ${pending} unverified transaction(s). Follow up with your clients to verify them.`,
+            action: `Verify pending transactions to unlock +${obtainable} Points and boost your score.`
+          });
+        } else if (volumePoints < 40) {
+          const needed = 10 - totalTx;
+          setAiInsight({
+            points: needed * 4,
+            title: "Increase Transaction Volume",
+            text: `You need ${needed} more verified transaction(s) to max out your Volume Points.`,
+            action: `Log more transactions to unlock +${needed * 4} Points and build credibility.`
+          });
+        } else {
+          setAiInsight({
+            points: 5,
+            title: "Connect External Identity",
+            text: "Your transaction metrics are excellent. Take the final step by verifying your identity externally.",
+            action: "Verify your LinkedIn or Company Registration to max out your profile."
+          });
+        }
 
-          // --- Dynamic AI Advisor Logic (Updated for 0-based Math) ---
-          if (totalTx === 0) {
-            setAiInsight({
-              points: 4,
-              title: "Start from Zero",
-              text: "You haven't recorded any activity yet. You currently have 0 points. Let's fix that.",
-              action: "Log your first transaction to earn your first 4 Trust Points."
-            });
-          } else if (vRate < 80) {
-            const lostPoints = Math.max(2, Math.round((100 - vRate) * 0.40));
-            setAiInsight({
-              points: lostPoints,
-              title: "Improve Verification Rate",
-              text: `Your verification rate is currently at ${vRate}%. Clients need to verify your pending logs.`,
-              action: `Verify pending transactions to recover ${lostPoints} Points and boost your score.`
-            });
-          } else if (totalTx < 10) {
-            const needed = 10 - totalTx;
-            setAiInsight({
-              points: needed * 4,
-              title: "Increase Transaction Volume",
-              text: `You need ${needed} more verified transaction(s) to max out your Volume Points.`,
-              action: `Log more transactions to unlock +${needed * 4} Points and build credibility.`
-            });
-          } else {
-            setAiInsight({
-              points: 5,
-              title: "Connect External Identity",
-              text: "Your transaction metrics are excellent. Take the final step by verifying your identity externally.",
-              action: "Verify your LinkedIn or Company Registration to max out your profile."
-            });
-          }
-
-          // --- Dynamic Notifications ---
-          if (transactions) {
-            const alerts = transactions
-              .filter(t => t.status === 'Disputed' || t.status === 'Pending')
-              .reverse()
-              .slice(0, 3)
-              .map(t => ({
-                id: t.id,
-                type: t.status,
-                client: t.client_name || 'a client',
-              }));
-            setNotifications(alerts);
-          }
+        // --- Dynamic Notifications ---
+        if (transactions) {
+          const alerts = transactions
+            .filter(t => t.status === 'Disputed' || t.status === 'Pending')
+            .reverse()
+            .slice(0, 3)
+            .map(t => ({
+              id: t.id,
+              type: t.status,
+              client: t.client_name || 'a client',
+            }));
+          setNotifications(alerts);
         }
       } catch (err) {
         console.error("Error in Trust Score lifecycle:", err);
@@ -173,7 +169,7 @@ const TrustScore = () => {
     };
   }, [navigate]);
 
-  // 2. Real Historical Chart Generator (Zero-Based Math)
+  // 2. Real Historical Chart Generator (Additive Math)
   useEffect(() => {
     if (stats.isLoading) return;
     
@@ -186,15 +182,14 @@ const TrustScore = () => {
       const totalTx = historicalTxs.length;
       const verifiedTx = historicalTxs.filter(t => t.status === 'Verified').length;
       
-      const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 0;
       const volumePoints = Math.min(totalTx * 4, 40); 
-      const verificationPoints = Math.round((vRate / 100) * 40); 
+      const verificationPoints = Math.min(verifiedTx * 4, 40); 
       
       const joinDate = new Date(stats.joinDate || now);
       const daysActive = Math.max(0, (upToDate - joinDate) / (1000 * 60 * 60 * 24));
       const agePoints = Math.min(Math.round(daysActive / 18.25), 20);
 
-      return Math.min(100, 0 + volumePoints + verificationPoints + agePoints);
+      return Math.min(100, volumePoints + verificationPoints + agePoints);
     };
 
     if (timeframe === '30_days') {
