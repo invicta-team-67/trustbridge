@@ -36,7 +36,7 @@ const TrustReport = () => {
     joinDate: '',
     chartData: [],
     recentTransactions: [],
-    clientEndorsements: [] // Replaces dummy testimonials
+    clientEndorsements: [] 
   });
 
   // CONNECTED & REAL-TIME: Auth Guard & Data Fetching
@@ -76,23 +76,29 @@ const TrustReport = () => {
         }
 
         if (profile && transactions) {
-          // --- REAL CALCULATIONS ---
+          // --- ZERO-TRUST SCORING MATH (Starts at 0) ---
           const totalVolume = transactions.reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
           
-          // Use identical realistic Trust Score math as the Trust Score page
           const totalTx = transactions.length;
           const verifiedTx = transactions.filter(t => t.status === 'Verified').length;
           const vRate = totalTx > 0 ? Math.round((verifiedTx / totalTx) * 100) : 0;
-          const volumePoints = Math.min(totalTx * 2, 20); 
-          const verificationPoints = Math.round((vRate / 100) * 30); 
-          const calculatedScore = Math.min(100, 50 + volumePoints + verificationPoints);
-
+          
           const createdDate = new Date(profile.created_at || Date.now());
           const now = new Date();
-          const diffTime = Math.abs(now - createdDate);
-          const diffYears = (diffTime / (1000 * 60 * 60 * 24 * 365)).toFixed(1);
+          const daysActive = Math.max(0, (now - createdDate) / (1000 * 60 * 60 * 24));
+          const diffYears = (daysActive / 365.25).toFixed(1);
 
-          // Generate true 6-month historical chart data (No dummies)
+          // Volume: 4 points per transaction, max 40 points
+          const volumePoints = Math.min(totalTx * 4, 40); 
+          // Verification: Max 40 points depending on their rate
+          const verificationPoints = Math.round((vRate / 100) * 40); 
+          // Age: Max 20 points
+          const agePoints = Math.min(Math.round(daysActive / 18.25), 20); 
+
+          // Final Score starts exactly from 0
+          const calculatedScore = Math.min(100, 0 + volumePoints + verificationPoints + agePoints);
+
+          // Generate true 6-month historical chart data 
           const last6Months = Array.from({ length: 6 }, (_, i) => {
             const d = new Date();
             d.setMonth(d.getMonth() - (5 - i));
@@ -108,7 +114,7 @@ const TrustReport = () => {
             const txDate = new Date(tx.created_at);
             const monthEntry = last6Months.find(m => m.rawMonth === txDate.getMonth() && m.rawYear === txDate.getFullYear());
             if (monthEntry) {
-              monthEntry.value += 10; // Increment activity score per transaction
+              monthEntry.value += 10; // Increment activity score per transaction for the chart
             }
           });
 
@@ -118,12 +124,11 @@ const TrustReport = () => {
             client: tx.client_name || 'Unknown Client',
             type: tx.service_provided || 'Service Rendered',
             date: new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            status: tx.status // Pass real status
+            status: tx.status 
           }));
 
           // Generate dynamic client endorsements from actual 'Verified' clients
           const verifiedClients = transactions.filter(t => t.status === 'Verified' && t.client_name);
-          // Get unique verified clients to avoid duplicate testimonials
           const uniqueClients = Array.from(new Set(verifiedClients.map(a => a.client_name)))
             .map(name => verifiedClients.find(a => a.client_name === name))
             .slice(0, 2);
