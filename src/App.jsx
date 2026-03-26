@@ -26,7 +26,8 @@ import TrustScore from './pages/dashboard/TrustScore';
 import Settings from './pages/dashboard/Settings';
 
 // --- NEW: INSTITUTIONAL & SENTINEL ECOSYSTEM ---
-import TrustBridgeSentinel from './pages/institutional/TrustBridgeSentinel';
+// FIXED IMPORT PATH HERE:
+import TrustBridgeSentinel from './pages/institutional/SentinelLanding';
 import SentinelLookupResult from './pages/institutional/SentinelLookupResult';
 import InstitutionalVault from './pages/institutional/InstitutionalVault';
 import InstitutionalDashboard from './pages/institutional/InstitutionalDashboard';
