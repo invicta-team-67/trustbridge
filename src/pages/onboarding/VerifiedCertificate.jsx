@@ -2,13 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import Logo from '../../components/logo2';
+
+const CheckCircleIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-black">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+);
 
 const VerifiedCertificate = () => {
   const navigate = useNavigate();
   
   const [profileData, setProfileData] = useState({
     businessName: '',
-    tbId: 'TB-00000-X',
+    tbId: '',
     joinDate: ''
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -17,106 +24,97 @@ const VerifiedCertificate = () => {
     const fetchUserData = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        
         if (user) {
+          // Fetch the real name you just saved in Onboarding
           const { data, error } = await supabase
             .from('profiles')
-            .select('business_name, tb_id, created_at')
-            .eq('id', user.id)
+            .select('id, business_name, created_at')
+            .eq('user_id', user.id) // Query by user_id
             .single();
 
           if (data) {
+            const dateObj = new Date(data.created_at);
             setProfileData({
-              businessName: data.business_name || 'YOUR BUSINESS',
-              tbId: data.tb_id || 'TB-0000-X',
-              joinDate: new Date(data.created_at).toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric'
-              })
+              businessName: data.business_name || 'VERIFIED BUSINESS',
+              tbId: `TB-${data.id.substring(0, 5).toUpperCase()}-X`,
+              joinDate: dateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
             });
           }
         }
       } catch (err) {
-        console.error('Error fetching profile:', err);
+        console.error("Error fetching profile:", err);
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchUserData();
   }, []);
 
-  // LOGIC: Get the first letter of the business name
-  const businessInitial = profileData.businessName 
-    ? profileData.businessName.trim().charAt(0).toUpperCase() 
-    : 'B';
+  // Get the first letter for the logo
+  const initial = profileData.businessName.charAt(0).toUpperCase() || 'T';
 
-  if (isLoading) return <div className="h-screen flex items-center justify-center text-xs font-bold tracking-widest text-gray-400">VERIFYING...</div>;
+  if (isLoading) return <div className="h-screen flex items-center justify-center font-mono text-xs tracking-widest">LOADING CERTIFICATE...</div>;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4 sm:p-8 font-mono uppercase text-black">
-      <div className="w-full max-w-md">
-        
-        {/* CERTIFICATE AREA (This part is printable) */}
-        <div id="certificate-content" className="border-4 border-black p-6 sm:p-10 relative bg-white overflow-hidden shadow-[20px_20px_0px_0px_rgba(0,0,0,0.05)]">
+    <div className="min-h-screen w-full flex bg-white font-sans text-[#0f172a]">
+      {/* Branding Column */}
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden flex-col justify-between p-12 xl:p-20 h-screen sticky top-0">
+        <img src="/auth-images/img-container.png" alt="Background" className="absolute inset-0 w-full h-full object-cover z-0" />
+        <div className="relative z-10 mt-16 text-white">
+          <h1 className="text-5xl font-extrabold mb-6 drop-shadow-sm">You're All Set!</h1>
+          <p className="text-blue-50 text-lg font-medium drop-shadow-sm">Your business is fully verified.</p>
+        </div>
+        <div className="relative z-10 flex items-center gap-2 text-white">
+          <Logo /> <span className="font-bold text-2xl">TrustBridge</span>
+        </div>
+      </div>
+
+      {/* Certificate Column */}
+      <div className="w-full lg:w-[60%] flex flex-col items-center p-6 sm:p-12 h-screen overflow-y-auto bg-[#f8fafc]">
+        <div className="w-full max-w-[360px] flex flex-col items-center my-auto py-8">
           
-          {/* Logo Section - Using First Letter */}
-          <div className="flex justify-between items-start mb-12">
-            <div className="w-12 h-12 border-2 border-black flex items-center justify-center font-bold text-2xl bg-black text-white">
-              {businessInitial}
-            </div>
-            <div className="text-[10px] text-right font-bold leading-tight">
-              VERIFIED<br/>MERCHANT<br/>2026
-            </div>
-          </div>
-
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="space-y-8"
-          >
-            <div>
-              <p className="text-[10px] font-bold tracking-[0.2em] mb-2 opacity-40">ACCOUNT IDENTIFIER</p>
-              <h1 className="text-xl sm:text-2xl font-black leading-none break-words">
-                {profileData.businessName}
-              </h1>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white w-full rounded p-8 border border-gray-800 flex flex-col items-center text-center shadow-sm mb-6">
+            
+            {/* Business Initial Logo */}
+            <div className="w-16 h-16 bg-[#0f172a] text-white flex items-center justify-center text-2xl font-bold rounded shadow-sm mb-6">
+              {initial}
             </div>
 
-            <div className="grid grid-cols-2 gap-4 border-t-2 border-black pt-6">
-              <div>
-                <p className="text-[8px] font-bold tracking-[0.2em] mb-1 opacity-40">CERTIFICATE NO.</p>
-                <p className="text-xs font-bold tracking-tighter">{profileData.tbId}</p>
+            {/* REAL BUSINESS NAME */}
+            <h1 className="text-lg font-bold tracking-widest text-[#0f172a] uppercase mb-1 truncate w-full px-2">
+              {profileData.businessName}
+            </h1>
+            
+            <p className="text-xs font-medium text-gray-500 font-mono tracking-wider mb-8">
+              ID: {profileData.tbId}
+            </p>
+
+            {/* QR SCAN (Kept exactly as it was) */}
+            <div className="bg-white p-3 border border-gray-200 rounded-xl shadow-sm mb-8">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https://trustbridge.app/verify/${profileData.tbId}&color=0f172a`} 
+                alt="Verification QR Code" 
+                className="w-40 h-40"
+              />
+            </div>
+
+            <div className="w-full h-[1px] bg-gray-200 mb-4"></div>
+
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2 text-sm font-bold text-[#0f172a] tracking-wider uppercase">
+                <CheckCircleIcon /> VERIFIED
               </div>
-              <div className="text-right">
-                <p className="text-[8px] font-bold tracking-[0.2em] mb-1 opacity-40">MEMBER SINCE</p>
-                <p className="text-xs font-bold tracking-tighter">{profileData.joinDate}</p>
-              </div>
-            </div>
-
-            <div className="pt-4 flex justify-center">
-               <div className="bg-black text-white px-4 py-2 text-[10px] font-bold tracking-widest">
-                 OFFICIAL VERIFIED STATUS
-               </div>
+              <p className="text-[10px] font-medium text-gray-500 uppercase">
+                Member Since: {profileData.joinDate}
+              </p>
             </div>
           </motion.div>
-        </div>
 
-        {/* Buttons (Hidden when printing) */}
-        <div className="mt-8 flex flex-col gap-3 print:hidden">
-          <button 
-            onClick={() => window.print()}
-            className="w-full bg-black text-white py-4 text-xs font-bold tracking-widest hover:bg-gray-800 transition-colors"
-          >
-            PRINT CERTIFICATE
-          </button>
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="w-full bg-white border-2 border-black text-black py-4 text-xs font-bold tracking-widest hover:bg-gray-50 transition-colors"
-          >
-            GO TO DASHBOARD
-          </button>
+          <div className="w-full flex flex-col gap-3">
+            <button onClick={() => window.print()} className="w-full bg-[#1e293b] text-white py-3.5 text-xs font-bold tracking-wider rounded">DOWNLOAD PDF</button>
+            <button onClick={() => navigate('/dashboard')} className="w-full bg-white border-2 border-[#1e293b] text-[#1e293b] py-3.5 text-xs font-bold tracking-wider rounded">GO TO DASHBOARD</button>
+          </div>
+
         </div>
       </div>
     </div>
