@@ -4,7 +4,8 @@ import {
   LayoutGrid, Landmark, ShieldCheck, FileText, LifeBuoy, 
   PlusCircle, Shield, LogOut, Bell, Settings, UserCircle,
   Zap, ArrowUpRight, ArrowDownLeft, CheckCircle2, Percent, 
-  Clock, HeadphonesIcon, Building2, Loader2, ChevronRight
+  Clock, HeadphonesIcon, Building2, Loader2, ChevronRight,
+  TrendingUp // <--- YOU MUST ADD THIS HERE!
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
