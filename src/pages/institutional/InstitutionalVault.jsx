@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Search, ShieldAlert, BarChart3, 
   FileCheck, Settings, LogOut, LifeBuoy, Bell, ChevronDown, 
   Filter, Download, AlertTriangle, Activity, ShieldCheck,
-  PlusCircle, Loader2
+  PlusCircle, Loader2, TrendingUp
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -37,7 +37,7 @@ const InstitutionalVault = () => {
         // Fetch all transactions to calculate aggregate risk & volume
         const { data: transactions, error: txError } = await supabase
           .from('transactions')
-          .select('user_id, amount, status, created_at');
+.select('id, user_id, business_name, business_type')
 
         if (profiles && transactions) {
           let totalPlatformVolume = 0;
