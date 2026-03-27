@@ -38,10 +38,13 @@ const SentinelLookupResult = () => {
         setError(null);
 
         // 1. Search for the profile (by business_name OR short ID)
+// 1. Clean the search term (removes %20 spaces) and search ONLY by business_name
+        const cleanSearchTerm = decodeURIComponent(id);
+        
         const { data: profiles, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .or(`business_name.ilike.%${id}%,id.eq.${id}`)
+          .ilike('business_name', `%${cleanSearchTerm}%`)
           .limit(1);
 
         if (profileError || !profiles || profiles.length === 0) {
