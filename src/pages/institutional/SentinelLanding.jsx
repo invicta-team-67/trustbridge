@@ -89,9 +89,9 @@ const TrustBridgeSentinel = () => {
         </div>
 
         <div className="flex items-center gap-5">
-          <button onClick={() => navigate('/dashboard')} className="bg-[#1e40af] text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-800 transition-colors active:scale-95">
-            Go to Dashboard
-          </button>
+<button onClick={() => navigate('/institutional-vault')} className="bg-[#1e40af] text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-800 transition-colors active:scale-95">
+  Go to Vault
+</button>
         </div>
       </nav>
 
