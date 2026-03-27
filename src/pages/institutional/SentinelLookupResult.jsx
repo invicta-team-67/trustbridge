@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { 
   CheckCircle2, ShieldAlert, Download, Star, Info, 
   TrendingUp, Activity, ShieldCheck, FileText, Search, 
-  ChevronRight, Loader2
+  ChevronRight, Loader2, Building2 
 } from 'lucide-react';
 import { BarChart, Bar, ResponsiveContainer, Tooltip, Cell } from 'recharts';
 import { supabase } from '../../lib/supabase';
