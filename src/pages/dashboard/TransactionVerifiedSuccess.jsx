@@ -43,7 +43,7 @@ const TransactionVerifiedSuccess = () => {
         const { data: txData, error: txError } = await supabase
           .from('transactions')
           .select('*')
-          .eq('id', transactionId)
+          .eq('transaction_id', transactionId)
           .maybeSingle();
 
         if (txError) throw txError;
